@@ -6,3 +6,7 @@ I have taken CS 156 which made me briefly familiar with web/app development. I k
 
 # Lawrence #
 I have past experience in CS156 working on web application development. I know Javascript/Java as well as the basic uses of the unit testing framework for each, and have some exposure to the process of Google Authentication. I look forward to applying these skills and learning more on mobile development for this shopping list application.
+
+
+# Kenisha #
+I have some experience with web development from CS 156 last year. I am excited to pick up on some new skills and learn more this quarter.
