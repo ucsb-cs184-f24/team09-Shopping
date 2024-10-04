@@ -10,3 +10,6 @@ I have past experience in CS156 working on web application development. I know J
 
 # Kenisha #
 I have some experience with web development from CS 156 last year. I am excited to pick up on some new skills and learn more this quarter.
+
+# Kavya #
+I some experience in React web development from an internship and from CS 156. I know Javascript, HTML, CSS at a high-level, and I look forward to learning mobile app development through React Native.
