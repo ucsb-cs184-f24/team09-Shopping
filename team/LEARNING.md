@@ -13,3 +13,6 @@ I have some experience with web development from CS 156 last year. I am excited 
 
 # Kavya #
 I some experience in React web development from an internship and from CS 156. I know Javascript, HTML, CSS at a high-level, and I look forward to learning mobile app development through React Native.
+
+# Wenxuan #
+I have some experience building a react native app for one of my math course. For frontend development, I know JS and HTML and there is definitely much more I need to learn. I am looking forward to develop the cool project with you and learn new things.
