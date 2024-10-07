@@ -9,5 +9,6 @@
 
 ## Agenda:
 1. Schedule meetings
-2. Create problem scenario
+2. Programming Homework 1
+3. Create problem scenario
 
