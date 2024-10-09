@@ -1,6 +1,6 @@
 # Team-09-Shopping: Shared Grocery List App
 
-Description: A live and editable grocery list that can be shared with roommates and family members.
+A live and editable grocery list that can be shared with roommates and family members.
 
 ## Group Members: ##
 - Anika, Github ID: amisra0
