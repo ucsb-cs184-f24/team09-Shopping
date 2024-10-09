@@ -7,7 +7,7 @@
 **Team Attendance:**
 
 - Scribe:
-  Lawrence Wang
+  Lawrence Wang [x]
 
 - Other Members:
 Anika [x]
