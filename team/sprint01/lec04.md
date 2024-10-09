@@ -6,10 +6,10 @@
 
 **Team Attendance:**
 
-Scribe:
+- Scribe:
 
 
-Members:
+- Members:
 Anika [x]
 Kavya [x]
 Kenisha [x]
