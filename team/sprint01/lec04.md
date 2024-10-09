@@ -1,10 +1,22 @@
-# Scrum Meeting Notes
+# Project: Shared Grocery List App
 
-**Date:** October 9, 2024  
-**Attendees:**  
-- **SCRUM Master**: Anika  
-- **Product Owner**: Lawrence
-- **Scribe**: Owen
-- **Team Members**: Wenxuan, Kenisha, Kavya
+**Meeting Time:** lec04
+
+**Type of Meeting:** Daily scrum
+
+**Team Attendance:**
+
+Scribe:
+
+
+Members:
+Anika [x]
+Kavya [x]
+Kenisha [x]
+Lawrence [x]
+Wenxuan [x]
+Owen [x]
 
 ## Completed Agenda:
+
+## Scribed Discussion:
