@@ -10,10 +10,10 @@
 Owen [x]
 
 - Other Members:
-Anika [x]
-Kavya [x]
-Kenisha [x]
-Lawrence [x]
+Anika [x],
+Kavya [x],
+Kenisha [x],
+Lawrence [x],
 Wenxuan [x]
 
 ## Completed Agenda:
