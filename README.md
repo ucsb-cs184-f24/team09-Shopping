@@ -6,6 +6,6 @@ Description: A live and editable grocery list that can be shared with roommates 
 - Anika, Github ID: amisra0
 - Kavya, Github ID: Kavya75
 - Kenisha, Github ID: kenisha-v
-- Lawrence
+- Lawrence, Github IDL lawrencewang30
 - Wenxuan
 - Owen, Github ID: owenjpark
