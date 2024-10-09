@@ -7,13 +7,12 @@
 **Team Attendance:**
 
 - Scribe:
-[Insert Here]
+  Lawrence Wang
 
 - Other Members:
 Anika [x]
 Kavya [x]
 Kenisha [x]
-Lawrence [x]
 Wenxuan [x]
 Owen [x]
 
