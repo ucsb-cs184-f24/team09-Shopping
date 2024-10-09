@@ -1,4 +1,4 @@
-# team09-Shopping: Shared Grocery List App
+# Team-09-Shopping: Shared Grocery List App
 
 Description: A live and editable grocery list that can be shared with roommates and family members.
 
