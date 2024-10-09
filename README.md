@@ -7,7 +7,7 @@ Description: A live and editable grocery list that can be shared with roommates 
 - Kavya, Github ID: Kavya75
 - Kenisha, Github ID: kenisha-v
 - Lawrence, Github ID: lawrencewang30
-- Wenxuan
+- Wenxuan, Github ID: inarihimeko
 - Owen, Github ID: owenjpark
 
 ## Tech Stacks:
