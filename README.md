@@ -1,8 +1,6 @@
-# team09Shopping
+# team09Shopping: Shared Grocery List App
 
-
-
-
+Description:
 
 ## Group Members: ##
 - Anika
