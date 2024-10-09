@@ -14,7 +14,7 @@ Anika [x],
 Kavya [x],
 Kenisha [x],
 Lawrence [x],
-Wenxuan [x],
+Wenxuan [x]
 
 ## Completed Agenda:
 1. Introduction
