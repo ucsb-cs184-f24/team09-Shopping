@@ -5,6 +5,7 @@
 **Type of meeting:** daily scrum
 
 **Team:**
+
 Scribe: Owen [x]
 
 Members:
