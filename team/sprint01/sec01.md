@@ -2,7 +2,7 @@
 
 **Meeting Time:** sec01
 
-**Type of meeting:** daily scrum
+**Type of Meeting:** Daily scrum
 
 **Team:**
 
