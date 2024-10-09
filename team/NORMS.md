@@ -1,6 +1,6 @@
 # Team Norms
 
-The following guidelines define our team's core values and behaviors. By adhering to these norms, we aim to create a productive, respectful, and collaborative environment for everyone.
+Team Members: Anika, Kavya, Kenisha, Lawrence, Owen, Wenxuan
 
 ## 1. Update progress often
 
