@@ -6,9 +6,10 @@
 
 **Team:**
 
-- Scribe: Owen [x]
+- Scribe:
+Owen [x]
 
-- Members:
+- Other Members:
 Anika [x]
 Kavya [x]
 Kenisha [x]
