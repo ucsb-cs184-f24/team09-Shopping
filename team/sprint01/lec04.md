@@ -18,6 +18,7 @@ Wenxuan [x]
 Owen [x]
 
 ## Completed Agenda:
-1. 
+1. Scheduled additional Scrum meeting
+2. Add name of project, description, and team member names to the README.
 
 ## Scribed Discussion:
