@@ -10,10 +10,10 @@
   Lawrence Wang [x]
 
 - Other Members:
-Anika [x]
-Kavya [x]
-Kenisha [x]
-Wenxuan [x]
+Anika [x],
+Kavya [x],
+Kenisha [x],
+Wenxuan [x],
 Owen [x]
 
 ## Completed Agenda:
