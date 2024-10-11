@@ -18,6 +18,8 @@ I some experience in React web development from an internship and from CS 156. I
 I have some experience building a react native app for one of my math course. For frontend development, I know JS and HTML and there is definitely much more I need to learn. I am looking forward to develop the cool project with you and learn new things.
 
 
+
+# Timestamp: 10:33 AM, 10/11/24
 ## Resources:
 - https://www.youtube.com/watch?v=ZBCUegTZF7M&t=1488s
 - https://youtu.be/6ZnfsJ6mM5c?feature=shared
