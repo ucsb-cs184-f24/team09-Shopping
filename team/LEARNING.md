@@ -21,3 +21,4 @@ I have some experience building a react native app for one of my math course. Fo
 ## Resources:
 - https://www.youtube.com/watch?v=ZBCUegTZF7M&t=1488s
 - https://youtu.be/6ZnfsJ6mM5c?feature=shared
+- https://devdocs.io/react_native/
