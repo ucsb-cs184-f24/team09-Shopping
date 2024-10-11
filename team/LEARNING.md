@@ -25,6 +25,7 @@ I have some experience building a react native app for one of my math course. Fo
 - https://youtu.be/6ZnfsJ6mM5c?feature=shared
 - https://devdocs.io/react_native/
 - https://www.reactnative.express/javascript
+- https://docs.expo.dev/tutorial/introduction/
 
 ### Benefits of React-Native/Expo
 - cross-platform
