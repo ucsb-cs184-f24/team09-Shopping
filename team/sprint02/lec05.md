@@ -18,4 +18,4 @@
 
   ## Completed Agenda:
   1. Creating User Stories and assigning them to respective user (move at least one to In-Progress/Done column)
-  2. Assigned Retro Leader for this week to Kenisha (kenisha-v)
+  2. Assigned Retro Leader for this week to Kenisha (@kenisha-v)
