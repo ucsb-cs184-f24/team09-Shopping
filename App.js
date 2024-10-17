@@ -4,16 +4,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { View, StyleSheet, Text, Button } from 'react-native';
 import CreateHousholdScreen from './src/screens/CreateHouseholdScreen';
 
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyCqZfBoHz9xHQauW8AujAtYWCb-wbVRoak",
-  authDomain: "team09shopping.firebaseapp.com",
-  projectId: "team09shopping",
-  storageBucket: "team09shopping.appspot.com",
-  messagingSenderId: "109915220092",
-  appId: "1:109915220092:web:f00008ccde2f52b8f781f9"
-};
-
 const Stack = createStackNavigator();
 
 export default function App() {
