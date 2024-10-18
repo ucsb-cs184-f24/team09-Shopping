@@ -6,7 +6,7 @@
   Kenisha [X]
 
 - Other Members:
-Anika [],
+Anika [X] ,
 Kavya [X],
 Lawrence [X],
 Wenxuan [X],
