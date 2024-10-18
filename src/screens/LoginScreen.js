@@ -7,19 +7,7 @@ import { auth } from '../../firebaseConfig';
 const LoginScreen = () => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
-
-    const navigation = useNavigation()
     
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, user => {
-            if (user) {
-                navigation.replace("Home")
-            }
-        })
-
-        return unsubscribe
-    }, [])
-
     const handleSignUp = () => {
         createUserWithEmailAndPassword(auth, email, password)
         .then(userCredentials => {
