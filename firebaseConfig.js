@@ -2,12 +2,12 @@ import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCqZfBoHz9xHQauW8AujAtYWCb-wbVRoak",
-  authDomain: "team09shopping.firebaseapp.com",
-  projectId: "team09shopping",
-  storageBucket: "team09shopping.appspot.com",
-  messagingSenderId: "109915220092",
-  appId: "1:109915220092:web:f00008ccde2f52b8f781f9"
+  apiKey: "AIzaSyBnNDW20WqSlYlUg_P5sl_cCQMFoQgUILk",
+  authDomain: "team09-shopping-740a4.firebaseapp.com",
+  projectId: "team09-shopping-740a4",
+  storageBucket: "team09-shopping-740a4.appspot.com",
+  messagingSenderId: "1060525013453",
+  appId: "1:1060525013453:web:5e72acd7453787629dec84"
 };
 
 let app;
