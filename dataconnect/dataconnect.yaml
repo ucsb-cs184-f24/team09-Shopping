@@ -1,0 +1,12 @@
+specVersion: "v1beta"
+serviceId: "HelloWorld184"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "HelloWorld184-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]
