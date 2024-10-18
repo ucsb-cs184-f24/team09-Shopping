@@ -1,22 +1,22 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth } from "firebase/auth";
 
-// Optionally import the services that you want to use
-// import {...} from "firebase/auth";
-// import {...} from "firebase/database";
-// import {...} from "firebase/firestore";
-// import {...} from "firebase/functions";
-// import {...} from "firebase/storage";
-
-// Initialize Firebase
 const firebaseConfig = {
-  apiKey: 'api-key',
-  authDomain: 'project-id.firebaseapp.com',
-  databaseURL: 'https://project-id.firebaseio.com',
-  projectId: 'project-id',
-  storageBucket: 'project-id.appspot.com',
-  messagingSenderId: 'sender-id',
-  appId: 'app-id',
-  measurementId: 'G-measurement-id',
+  apiKey: "AIzaSyBnNDW20WqSlYlUg_P5sl_cCQMFoQgUILk",
+  authDomain: "team09-shopping-740a4.firebaseapp.com",
+  projectId: "team09-shopping-740a4",
+  storageBucket: "team09-shopping-740a4.appspot.com",
+  messagingSenderId: "1060525013453",
+  appId: "1:1060525013453:web:5e72acd7453787629dec84"
 };
 
-const app = initializeApp(firebaseConfig);
+let app;
+if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+} else {
+    app = getApps()[0];
+}
+
+const auth = getAuth(app);
+
+export { auth }
