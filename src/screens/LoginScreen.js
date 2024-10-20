@@ -1,27 +1,52 @@
-import { useState } from 'react'
-import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { useState, useEffect } from 'react'
+import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile } from "firebase/auth";
 import { auth } from '../../firebaseConfig';
+import { useNavigation } from '@react-navigation/native';
 
 const LoginScreen = () => {
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(true);
+    const navigation = useNavigation();
+
+    // check if user already logged in
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                navigation.navigate('HomeScreen');
+            } else {
+                setLoading(false);
+            }
+        });
+        return unsubscribe;
+    }, []);
     
     const handleSignUp = () => {
         createUserWithEmailAndPassword(auth, email, password)
         .then(userCredentials => {
+            const user = userCredentials.user;
+            console.log('Registered with:', user.email);
+            navigation.navigate("Home");
         })
         .catch(error => alert(error.message))
-    }
+    };
 
     const handleLogin = () => {
         signInWithEmailAndPassword(auth, email, password)
         .then(userCredentials => {
+            console.log('Logged in with:', userCredentials.user.email);
+            navigation.navigate("Home");
         })
         .catch(error => alert(error.message))
-    }
+    };
 
     return (
+        loading ? (
+            <View style={styles.container}>
+                <ActivityIndicator size="large" color="#0782F9" />
+            </View>
+        ) : (
         <KeyboardAvoidingView
             style={styles.container}
             behavior="padding"
@@ -57,7 +82,8 @@ const LoginScreen = () => {
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
-    )
+        )
+    );
 }
 
 export default LoginScreen
