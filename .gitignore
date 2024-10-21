@@ -15,6 +15,11 @@ web-build/
 *.p12
 *.key
 *.mobileprovision
+<<<<<<< HEAD
+*.orig.*
+web-build/
+yarn.lock
+=======
 
 # Metro
 .metro-health-check*
@@ -23,6 +28,7 @@ web-build/
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+>>>>>>> 9896780a76ec4681a20620a4fc149274201046bb
 
 # macOS
 .DS_Store
