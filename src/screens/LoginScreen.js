@@ -14,7 +14,7 @@ const LoginScreen = () => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
-                navigation.navigate('Home');
+                navigation.navigate('Create Household');
             } else {
                 setLoading(false);
             }
@@ -26,13 +26,13 @@ const LoginScreen = () => {
         signInWithEmailAndPassword(auth, email, password)
         .then(userCredentials => {
             console.log('Logged in with:', userCredentials.user.email);
-            navigation.navigate("Home");
+            navigation.navigate("Create Household");
         })
         .catch(error => alert(error.message))
     };
 
     const handleNavigateToRegister = () => {
-        navigation.navigate("Register");
+        navigation.navigate('Register');
     }
 
     return (
