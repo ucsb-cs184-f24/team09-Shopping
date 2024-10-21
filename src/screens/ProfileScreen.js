@@ -1,41 +1,87 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import { auth } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { updateProfile, signOut } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function ProfileScreen() {
-  const user = auth.currentUser;
-  const [name, setName] = useState(user?.displayName || '');
+  const [userData, setUserData] = useState(null);
+  const [name, setName] = useState('');
   const [editMode, setEditMode] = useState(false);
   const navigation = useNavigation();
 
-  // Function to update the user's name
+  // Fetch user data from FireStore
+  const fetchUserData = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setUserData(data);
+          setName(data.name || '');
+        } else {
+          console.log("No such user exists in Firestore!");
+        }
+      }
+    } catch (error) {
+      console.log("Error fetching user data: ", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  // update user's name
   const updateUserName = () => {
     if (name.trim() === '') {
       Alert.alert('Error', 'Please enter a valid name');
       return;
     }
 
-    updateProfile(user, { displayName: name })
-      .then(() => {
-        Alert.alert('Success', 'Name updated successfully');
-        setEditMode(false);
-      })
-      .catch(error => {
-        Alert.alert('Error', error.message);
-      });
+    const user = auth.currentUser;
+    if (user) {
+      updateProfile(user, { displayName: name})
+        .then(() => {
+          Alert.alert('Success', 'Name updated successfully');
+          setEditMode(false);
+          // update Firestore with new name
+          const docRef = doc(db, "users", user.uid);
+          setDoc(docRef, { name }, { merge: true })
+            .then(() => fetchUserData())
+            .catch(error => console.log("Error updating Firestore: ", error));
+        })
+        .catch(error => {
+          Alert.alert('Error', error.message);
+        });
+    }
   };
 
-  // Function for user to sign out
-  // TODO: need to fix "LoginScreen page not found in navigator" error message
   const handleSignOut = () => {
-    signOut(auth)
-    .then(() => {
-        navigation.navigate('LoginScreen');
-    })
-    .catch(error => Alert.alert('Error', error.message));
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          onPress: () => {
+            signOut(auth)
+              .then(() => {
+                console.log("Successfully signed out of the account");
+              })
+              .catch(error => Alert.alert('Error', error.message));
+          }
+        }
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -43,7 +89,7 @@ export default function ProfileScreen() {
       <Text style={styles.title}>Profile</Text>
 
       {/* Display user's email */}
-      <Text style={styles.info}>Email: {user?.email}</Text>
+      <Text style={styles.info}>Email: {userData?.email || 'Loading...'}</Text>
 
       {/* Name section */}
       <View style={styles.nameContainer}>
@@ -61,7 +107,7 @@ export default function ProfileScreen() {
         ) : (
             <View style={styles.nameDisplay}>
                 {/* Display name */}
-                <Text style={styles.info}>Name: {user?.displayName || 'No name set'}</Text>
+                <Text style={styles.info}>Name: {userData?.name || 'No name set'}</Text>
 
                 {/* Pencil icon to enable editing */}
                 <TouchableOpacity onPress={() => setEditMode(true)}>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from '../../firebaseConfig';
 import { useNavigation } from '@react-navigation/native';
 
@@ -14,23 +14,13 @@ const LoginScreen = () => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
-                navigation.navigate('HomeScreen');
+                navigation.navigate('Home');
             } else {
                 setLoading(false);
             }
         });
         return unsubscribe;
     }, []);
-    
-    const handleSignUp = () => {
-        createUserWithEmailAndPassword(auth, email, password)
-        .then(userCredentials => {
-            const user = userCredentials.user;
-            console.log('Registered with:', user.email);
-            navigation.navigate("Home");
-        })
-        .catch(error => alert(error.message))
-    };
 
     const handleLogin = () => {
         signInWithEmailAndPassword(auth, email, password)
@@ -40,6 +30,10 @@ const LoginScreen = () => {
         })
         .catch(error => alert(error.message))
     };
+
+    const handleNavigateToRegister = () => {
+        navigation.navigate("Register");
+    }
 
     return (
         loading ? (
@@ -75,10 +69,10 @@ const LoginScreen = () => {
                     <Text style = {styles.buttonText}>Login</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    onPress={handleSignUp}
+                    onPress={handleNavigateToRegister}
                     style={[styles.button, styles.buttonOutline]}
                 >
-                    <Text style = {styles.buttonOutlineText}>Register</Text>
+                    <Text style = {styles.buttonOutlineText}>New User? Sign up here!</Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
