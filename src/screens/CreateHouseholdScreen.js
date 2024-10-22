@@ -1,23 +1,26 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig'; // Make sure to use the correct path
 
-export default function CreateHousholdScreen({ navigation }) {
+export default function CreateHouseholdScreen({ navigation }) {
     const [householdName, setHouseholdName] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
 
-    const createHousehold = () => {
-
+    const createHousehold = async () => {
         if (!householdName.trim()) {
             setErrorMessage('Household name is required.');
         } else {
             setErrorMessage('');
 
-            // add logic to save to Firebase
-            // **FOR NOW**: temporary print statement as placeholder (See log in terminal)
-            console.log(`Creating household: ${householdName}`);
-            // Navigate to new screen or provide user feedback after successful creation
-            // **FOR NOW**: navigating back to home screen
-            navigation.goBack();
+            // Add household to Firestore
+            try {
+                await addDoc(collection(db, 'households'), { householdName });
+                console.log(`Creating household: ${householdName}`);
+                navigation.goBack();
+            } catch (error) {
+                console.error("Error creating household: ", error);
+            }
         }
     };
 
@@ -30,12 +33,13 @@ export default function CreateHousholdScreen({ navigation }) {
                 value={householdName}
                 onChangeText={setHouseholdName}
             />
-            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text>: null}
-            <Button title="Create Household" onPress={createHousehold}/>
+            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+            <Button title="Create Household" onPress={createHousehold} />
         </View>
     );
 }
 
+// Define styles using StyleSheet
 const styles = StyleSheet.create({
     container: {
         flex: 1,

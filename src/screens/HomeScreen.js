@@ -1,27 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert } from 'react-native';
+import { collection, addDoc, onSnapshot } from 'firebase/firestore'; 
+import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 
 export default function HomeScreen() {
   const [shoppingList, setShoppingList] = useState([]);  // State for shopping list
   const [newItem, setNewItem] = useState('');  // State for new item input
 
-  // Function to add a new item to the shopping list
-  const addItemToList = () => {
+  // Fetch real-time updates from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'groceryLists'), (snapshot) => {
+      const lists = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setShoppingList(lists);
+    });
+
+    return () => unsubscribe(); // Cleanup on component unmount
+  }, []);
+
+  // Function to add a new item to Firestore
+  const addItemToList = async () => {
     if (newItem.trim() === '') {
       Alert.alert('Error', 'Please enter an item');
       return;
     }
 
-    // Add the new item to the shopping list and clear the input field
-    setShoppingList([...shoppingList, { id: Date.now().toString(), name: newItem }]);
-    setNewItem('');
+    try {
+      // Add new item with all required fields to Firestore
+      await addDoc(collection(db, 'groceryLists'), {
+        itemName: newItem,
+        addedBy: auth.currentUser.email,  // Assumes user is logged in
+        isPurchased: false,
+        addedDate: new Date(),
+        houseCode: 'your-household-code',  // Replace with actual household code
+        category: 'Groceries'  // Example category
+      });
+      setNewItem(''); // Clear the input
+    } catch (error) {
+      console.error("Error adding item to Firestore: ", error);
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Shopping List</Text>
-
-      {/* Input field to add a new shopping item */}
+      
       <TextInput
         style={styles.input}
         placeholder="Add a new item..."
@@ -29,16 +54,15 @@ export default function HomeScreen() {
         onChangeText={setNewItem}
       />
 
-      {/* Button to add the item */}
       <Button title="Add Item" onPress={addItemToList} />
 
-      {/* List of shopping items */}
       <FlatList
         data={shoppingList}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.listItem}>
-            <Text>{item.name}</Text>
+            <Text>{item.itemName} - {item.addedBy}</Text>
+            <Text>{item.category}</Text>
           </View>
         )}
       />
