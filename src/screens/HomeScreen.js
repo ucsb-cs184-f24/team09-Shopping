@@ -1,20 +1,40 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert } from 'react-native';
+import { auth, db } from '../../firebaseConfig.js';  // Import Firestore db from firebaseConfig
+import { collection, addDoc } from 'firebase/firestore';  // Import Firestore functions
+
+
+
 
 export default function HomeScreen() {
   const [shoppingList, setShoppingList] = useState([]);  // State for shopping list
   const [newItem, setNewItem] = useState('');  // State for new item input
+  const [newItemCategory, setNewItemCategory] = useState('');
 
   // Function to add a new item to the shopping list
-  const addItemToList = () => {
-    if (newItem.trim() === '') {
-      Alert.alert('Error', 'Please enter an item');
+  const addItemToList = async () => {
+    if (newItem.trim() === '' || newItemCategory.trim() ==='') {
+      Alert.alert('Error', 'Please enter an item and its category');
       return;
     }
 
-    // Add the new item to the shopping list and clear the input field
-    setShoppingList([...shoppingList, { id: Date.now().toString(), name: newItem }]);
-    setNewItem('');
+    const newItemObj = { itemName: newItem, addedBy: 'insertUser', isPurchased: false, addedDate: Date.now().toString(), houseCodeCategory: newItemCategory };
+
+    try {
+      // Add the item to Firestore collection
+      const docRef = await addDoc(collection(db, 'items'), newItemObj);
+
+
+
+      // Update local state after successful Firestore addition
+      setShoppingList([...shoppingList, { id: docRef.id, ...newItemObj }]);
+      // Clear the input field
+      setNewItem('');
+      setNewItemCategory('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item. Please try again.');
+      console.error(error);
+    }
   };
 
   return (
@@ -28,6 +48,12 @@ export default function HomeScreen() {
         value={newItem}
         onChangeText={setNewItem}
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Add item category..."
+        value={newItemCategory}
+        onChangeText={setNewItemCategory}
+      />
 
       {/* Button to add the item */}
       <Button title="Add Item" onPress={addItemToList} />
@@ -38,7 +64,8 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.listItem}>
-            <Text>{item.name}</Text>
+            <Text>{item.itemName}</Text>
+            <Text>Category: {item.houseCodeCategory}</Text>
           </View>
         )}
       />
