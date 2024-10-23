@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert } from 'react-native';
-import { auth, db } from '../../firebaseConfig.js';  // Import Firestore db from firebaseConfig
-import { collection, addDoc } from 'firebase/firestore';  // Import Firestore functions
-
-
+import { collection, addDoc, onSnapshot } from 'firebase/firestore'; 
+import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 
 
 export default function HomeScreen() {
@@ -11,18 +9,32 @@ export default function HomeScreen() {
   const [newItem, setNewItem] = useState('');  // State for new item input
   const [newItemCategory, setNewItemCategory] = useState('');
 
-  // Function to add a new item to the shopping list
+
+  // Fetch real-time updates from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'groceryLists'), (snapshot) => {
+      const lists = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setShoppingList(lists);
+    });
+
+    return () => unsubscribe(); // Cleanup on component unmount
+  }, []);
+
+  // Function to add a new item to Firestore
   const addItemToList = async () => {
     if (newItem.trim() === '' || newItemCategory.trim() ==='') {
       Alert.alert('Error', 'Please enter an item and its category');
       return;
     }
-
-    const newItemObj = { itemName: newItem, addedBy: 'insertUser', isPurchased: false, addedDate: Date.now().toString(), houseCodeCategory: newItemCategory };
-
+    
+    const newItemObj = { itemName: newItem, addedBy: auth.currentUser.email, isPurchased: false, addedDate: Date.now().toString(), houseCodeCategory: newItemCategory };
+    
     try {
       // Add the item to Firestore collection
-      const docRef = await addDoc(collection(db, 'items'), newItemObj);
+      const docRef = await addDoc(collection(db, 'groceryLists'), newItemObj);
 
 
 
@@ -34,14 +46,14 @@ export default function HomeScreen() {
     } catch (error) {
       Alert.alert('Error', 'Failed to add item. Please try again.');
       console.error(error);
+
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Shopping List</Text>
-
-      {/* Input field to add a new shopping item */}
+      
       <TextInput
         style={styles.input}
         placeholder="Add a new item..."
@@ -55,16 +67,14 @@ export default function HomeScreen() {
         onChangeText={setNewItemCategory}
       />
 
-      {/* Button to add the item */}
       <Button title="Add Item" onPress={addItemToList} />
 
-      {/* List of shopping items */}
       <FlatList
         data={shoppingList}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.listItem}>
-            <Text>{item.itemName}</Text>
+            <Text>{item.itemName} - {item.addedBy}</Text>
             <Text>Category: {item.houseCodeCategory}</Text>
           </View>
         )}
