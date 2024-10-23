@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useNavigation } from '@react-navigation/native';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -11,6 +11,8 @@ const RegisterScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [phone, setPhone] = useState('');
+    const [address, setAddress] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
     const navigation = useNavigation();
@@ -31,8 +33,9 @@ const RegisterScreen = () => {
             await setDoc(doc(db, "users", user.uid), {
                 name: name,
                 email: email,
-                password: password,
-                createdAt: new Date(),
+                phone: phone,
+                address: address,
+                createdAt: Timestamp.now(),
             });
 
             console.log('Registered with:', user.email);
@@ -41,6 +44,20 @@ const RegisterScreen = () => {
             alert(error.message);
         }
     };
+
+    // function to format phone number
+    const formatPhoneNumber = (text) => {
+        // remove all non-numeric characters
+        const cleaned = ('' + text).replace(/\D/g, '');
+
+        // format number as ###-###-####
+        const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+        if (match) {
+            return `${match[1]}${match[2] ? '-' + match[2] : ''}${match[3] ? '-' + match[3] : ''}`;
+        }
+
+        return text;
+    }
 
     return (
         <KeyboardAvoidingView
@@ -58,6 +75,20 @@ const RegisterScreen = () => {
                     placeholder="Email"
                     value={email}
                     onChangeText={text => setEmail(text)}
+                    style={styles.input}
+                />
+                <TextInput 
+                    placeholder='Phone'
+                    value={phone}
+                    onChangeText={text => setPhone(formatPhoneNumber(text))}
+                    style={styles.input}
+                    keyboardType='phone-pad'
+                    maxLength={12}
+                />
+                <TextInput 
+                    placeholder='Address'
+                    value={address}
+                    onChangeText={text => setAddress(text)}
                     style={styles.input}
                 />
                 <View style={styles.passwordContainer}>
