@@ -34,7 +34,7 @@ export default function HomeScreen() {
     
     try {
       // Add the item to Firestore collection
-      const docRef = await addDoc(collection(db, 'items'), newItemObj);
+      const docRef = await addDoc(collection(db, 'groceryLists'), newItemObj);
 
 
 
