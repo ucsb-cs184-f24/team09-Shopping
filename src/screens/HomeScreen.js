@@ -30,7 +30,7 @@ export default function HomeScreen() {
       return;
     }
     
-    const newItemObj = { itemName: newItem, addedBy: 'insertUser', isPurchased: false, addedDate: Date.now().toString(), houseCodeCategory: newItemCategory };
+    const newItemObj = { itemName: newItem, addedBy: auth.currentUser.email, isPurchased: false, addedDate: Date.now().toString(), houseCodeCategory: newItemCategory };
     
     try {
       // Add the item to Firestore collection
