@@ -3,9 +3,12 @@ import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert } from 'reac
 import { collection, addDoc, onSnapshot } from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 
+
 export default function HomeScreen() {
   const [shoppingList, setShoppingList] = useState([]);  // State for shopping list
   const [newItem, setNewItem] = useState('');  // State for new item input
+  const [newItemCategory, setNewItemCategory] = useState('');
+
 
   // Fetch real-time updates from Firestore
   useEffect(() => {
@@ -22,24 +25,28 @@ export default function HomeScreen() {
 
   // Function to add a new item to Firestore
   const addItemToList = async () => {
-    if (newItem.trim() === '') {
-      Alert.alert('Error', 'Please enter an item');
+    if (newItem.trim() === '' || newItemCategory.trim() ==='') {
+      Alert.alert('Error', 'Please enter an item and its category');
       return;
     }
-
+    
+    const newItemObj = { itemName: newItem, addedBy: 'insertUser', isPurchased: false, addedDate: Date.now().toString(), houseCodeCategory: newItemCategory };
+    
     try {
-      // Add new item with all required fields to Firestore
-      await addDoc(collection(db, 'groceryLists'), {
-        itemName: newItem,
-        addedBy: auth.currentUser.email,  // Assumes user is logged in
-        isPurchased: false,
-        addedDate: new Date(),
-        houseCode: 'your-household-code',  // Replace with actual household code
-        category: 'Groceries'  // Example category
-      });
-      setNewItem(''); // Clear the input
+      // Add the item to Firestore collection
+      const docRef = await addDoc(collection(db, 'items'), newItemObj);
+
+
+
+      // Update local state after successful Firestore addition
+      setShoppingList([...shoppingList, { id: docRef.id, ...newItemObj }]);
+      // Clear the input field
+      setNewItem('');
+      setNewItemCategory('');
     } catch (error) {
-      console.error("Error adding item to Firestore: ", error);
+      Alert.alert('Error', 'Failed to add item. Please try again.');
+      console.error(error);
+
     }
   };
 
@@ -53,6 +60,12 @@ export default function HomeScreen() {
         value={newItem}
         onChangeText={setNewItem}
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Add item category..."
+        value={newItemCategory}
+        onChangeText={setNewItemCategory}
+      />
 
       <Button title="Add Item" onPress={addItemToList} />
 
@@ -62,7 +75,7 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <View style={styles.listItem}>
             <Text>{item.itemName} - {item.addedBy}</Text>
-            <Text>{item.category}</Text>
+            <Text>Category: {item.houseCodeCategory}</Text>
           </View>
         )}
       />
