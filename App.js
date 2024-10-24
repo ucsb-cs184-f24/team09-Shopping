@@ -1,35 +1,19 @@
-import { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { auth } from './firebaseConfig';
-import { onAuthStateChanged } from "firebase/auth";
-import { NavigationContainer, StackActions } from '@react-navigation/native';
-import AuthStack from './src/navigation/AuthStack'
-import AppStack from './src/navigation/AppStack'
+// screens/AccountScreen.js
+import React from 'react';
+import { View, Text, Button } from 'react-native';
+import { firebase } from '../firebase';
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      setUser(user);
-      setLoading(false);
+export default function AccountScreen({ navigation }) {
+  const handleSignOut = () => {
+    firebase.auth().signOut().then(() => {
+      navigation.navigate('SignIn');
     });
-
-    return unsubscribe;
-  }, []);
-  
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
+  };
 
   return (
-    <NavigationContainer>
-      {user ? <AppStack /> : <AuthStack />}
-    </NavigationContainer>
+    <View>
+      <Text>Sign Out Page</Text>
+      <Button title="Sign Out" onPress={handleSignOut} />
+    </View>
   );
 }

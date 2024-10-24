@@ -1,30 +1,21 @@
-import { initializeApp, getApps } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getFirestore } from "firebase/firestore";
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBnNDW20WqSlYlUg_P5sl_cCQMFoQgUILk",
-  authDomain: "team09-shopping-740a4.firebaseapp.com",
-  projectId: "team09-shopping-740a4",
-  storageBucket: "team09-shopping-740a4.appspot.com",
-  messagingSenderId: "1060525013453",
-  appId: "1:1060525013453:web:5e72acd7453787629dec84"
+  apiKey: "AIzaSyAIisoo0pjv136kyuMzmdEiTF9LbsjIk0I",
+  authDomain: "sampleproj-cf88c.firebaseapp.com",
+  projectId: "sampleproj-cf88c",
+  storageBucket: "sampleproj-cf88c.appspot.com",
+  messagingSenderId: "870440475194",
+  appId: "1:870440475194:web:42ba73c55d7c7ea0107303",
+  measurementId: "G-2N8T01RN8S"
 };
 
-// Initialize Firebase only if it hasn't been initialized yet
-let app;
-if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-} else {
-    app = getApps()[0];
-}
-
-// Initialize Auth with AsyncStorage persistence
-const auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-});
-
-const db = getFirestore(app);
-
-export { auth, db };
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
