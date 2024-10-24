@@ -91,6 +91,12 @@ export default function HomeScreen() {
             item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
           )
         });
+
+        if (selectedCategory) {
+          setFilteredShoppingList((prevList) =>
+            prevList.filter(item => item.houseCodeCategory === selectedCategory)
+          );
+        }
       } else {
         console.log('No such document found!');
         Alert.alert('Error', 'Document not found in Firestore.');
