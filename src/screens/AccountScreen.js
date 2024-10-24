@@ -1,131 +1,48 @@
-import { useState, useEffect } from 'react'
-import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+// AccountScreen.js
+import React from 'react';
+import { View, Text, Button, StyleSheet } from 'react-native';
 import { auth } from '../../firebaseConfig';
-import { useNavigation } from '@react-navigation/native';
+import { signOut } from 'firebase/auth';
 
-const LoginScreen = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(true);
-    const navigation = useNavigation();
+export default function AccountScreen() {
+  const user = auth.currentUser;
 
-    // check if user already logged in
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                navigation.navigate('Home');
-            } else {
-                setLoading(false);
-            }
-        });
-        return unsubscribe;
-    }, []);
-
-    const handleLogin = () => {
-        signInWithEmailAndPassword(auth, email, password)
-        .then(userCredentials => {
-            console.log('Logged in with:', userCredentials.user.email);
-            navigation.navigate("Home");
-        })
-        .catch(error => alert(error.message))
-    };
-
-    const handleNavigateToRegister = () => {
-        navigation.navigate("Register");
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      console.log('User signed out!');
+      // Navigation is handled by the auth state listener in App.js
+    } catch (error) {
+      console.error('Sign out error:', error.message);
     }
+  };
 
-    return (
-        loading ? (
-            <View style={styles.container}>
-                <ActivityIndicator size="large" color="#0782F9" />
-            </View>
-        ) : (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior="padding"
-        >
-            <View style={styles.inputContainer}>
-                <TextInput
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={text => setEmail(text)}
-                    style={styles.input}
-                />
-                <TextInput
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={text => setPassword(text)}
-                    style={styles.input}
-                    secureTextEntry
-                />
-            </View>
-
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    onPress={handleLogin}
-                    style={styles.button}
-                >
-                    <Text style = {styles.buttonText}>Login</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={handleNavigateToRegister}
-                    style={[styles.button, styles.buttonOutline]}
-                >
-                    <Text style = {styles.buttonOutlineText}>New User? Sign up here!</Text>
-                </TouchableOpacity>
-            </View>
-        </KeyboardAvoidingView>
-        )
-    );
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>My Account</Text>
+      {user && (
+        <Text style={styles.email}>Email: {user.email}</Text>
+      )}
+      <Button title="Sign Out" onPress={handleSignOut} />
+    </View>
+  );
 }
 
-export default LoginScreen
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    inputContainer: {
-        width: '80%'
-    },
-    input: {
-        backgroundColor: 'white',
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 10,
-        marginTop: 5
-    },
-    buttonContainer: {
-        width: '60%',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 40
-    },
-    button: {
-        backgroundColor: '#0782F9',
-        width: '100%',
-        padding: 15,
-        borderRadius: 10,
-        alignItems: 'center'
-    },
-    buttonOutline: {
-        backgroundColor: 'white',
-        marginTop: 5,
-        borderColor: '#0782F9',
-        borderWidth: 2
-    },
-    buttonText: {
-        color: 'white',
-        fontWeight: '700',
-        fontSize: 16
-    },
-    buttonOutlineText: {
-        color: '#0782F9',
-        fontWeight: '700',
-        fontSize: 16
-    }
-    
-})
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 100,
+    backgroundColor: '#fff',
+  },
+  title: {
+    fontSize: 32,
+    marginBottom: 20,
+    color: 'purple',
+  },
+  email: {
+    fontSize: 18,
+    marginBottom: 40,
+    color: '#333',
+  },
+});
