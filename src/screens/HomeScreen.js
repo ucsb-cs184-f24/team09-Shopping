@@ -22,7 +22,14 @@ export default function HomeScreen() {
         ...doc.data()
       }));
       setShoppingList(lists);
-      setFilteredShoppingList(lists); // Initialize filtered list as full list
+
+      // Filter list if a category is selected
+      if (selectedCategory) {
+        const filteredList = lists.filter(item => item.houseCodeCategory === selectedCategory);
+        setFilteredShoppingList(filteredList);
+      } else {
+        setFilteredShoppingList(lists); // Show all items when no filter is selected
+      }
 
       // Extract unique categories from the list
       const uniqueCategories = [...new Set(lists.map(item => item.houseCodeCategory))];
@@ -30,7 +37,7 @@ export default function HomeScreen() {
     });
 
     return () => unsubscribe(); // Cleanup on component unmount
-  }, []);
+  }, [selectedCategory]); // Re-run effect if selectedCategory changes
 
   // Function to add a new item to Firestore
   const addItemToList = async () => {
@@ -44,15 +51,6 @@ export default function HomeScreen() {
     try {
       // Add the item to Firestore collection
       const docRef = await addDoc(collection(db, 'groceryLists'), newItemObj);
-
-      // Update local state after successful Firestore addition
-      const updatedList = [...shoppingList, { id: docRef.id, ...newItemObj }];
-      setShoppingList(updatedList);
-      setFilteredShoppingList(updatedList); // Update filtered list as well
-
-      // Update categories with the new item
-      const uniqueCategories = [...new Set(updatedList.map(item => item.houseCodeCategory))];
-      setCategories(uniqueCategories);
 
       // Clear the input fields
       setNewItem('');
@@ -77,36 +75,31 @@ export default function HomeScreen() {
     setFilterModalVisible(false); // Close the modal after selecting
   };
 
+  // Function to toggle the purchased status of an item
   const togglePurchased = async (itemId, currentStatus) => {
     try {
       // Update the purchased status in Firestore
       const itemRef = doc(db, 'groceryLists', itemId);
-      const docSnap = await getDoc(itemRef);
+      await updateDoc(itemRef, { isPurchased: !currentStatus });
 
-      if (docSnap.exists()) {
-        await updateDoc(itemRef, { isPurchased: !currentStatus });
+      // Update the local shoppingList state
+      setShoppingList((prevList) =>
+        prevList.map((item) =>
+          item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
+        )
+      );
 
-        setFilteredShoppingList((prevList) =>
-          {return prevList.map((item) =>
-            item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
-          )
-        });
-
-        if (selectedCategory) {
-          setFilteredShoppingList((prevList) =>
-            prevList.filter(item => item.houseCodeCategory === selectedCategory)
-          );
-        }
-      } else {
-        console.log('No such document found!');
-        Alert.alert('Error', 'Document not found in Firestore.');
-      }
+      // Apply the same update to filteredShoppingList if a filter is applied
+      setFilteredShoppingList((prevList) =>
+        prevList.map((item) =>
+          item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
+        )
+      );
     } catch (error) {
       Alert.alert('Error', 'Failed to update item status. Please try again.');
       console.error(error);
     }
   };
-
 
   return (
     <View style={styles.container}>
