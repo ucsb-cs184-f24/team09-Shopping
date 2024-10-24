@@ -86,11 +86,11 @@ export default function HomeScreen() {
       if (docSnap.exists()) {
         await updateDoc(itemRef, { isPurchased: !currentStatus });
 
-        setShoppingList((prevList) =>
-          prevList.map((item) =>
+        setFilteredShoppingList((prevList) =>
+          {return prevList.map((item) =>
             item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
           )
-        );
+        });
       } else {
         console.log('No such document found!');
         Alert.alert('Error', 'Document not found in Firestore.');
