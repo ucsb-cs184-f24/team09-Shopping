@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
-import { collection, addDoc, onSnapshot } from 'firebase/firestore'; 
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
+import { Ionicons } from '@expo/vector-icons';
 
 export default function HomeScreen() {
   const [shoppingList, setShoppingList] = useState([]);  // State for shopping list
@@ -21,7 +22,14 @@ export default function HomeScreen() {
         ...doc.data()
       }));
       setShoppingList(lists);
-      setFilteredShoppingList(lists); // Initialize filtered list as full list
+
+      // Filter list if a category is selected
+      if (selectedCategory) {
+        const filteredList = lists.filter(item => item.houseCodeCategory === selectedCategory);
+        setFilteredShoppingList(filteredList);
+      } else {
+        setFilteredShoppingList(lists); // Show all items when no filter is selected
+      }
 
       // Extract unique categories from the list
       const uniqueCategories = [...new Set(lists.map(item => item.houseCodeCategory))];
@@ -29,7 +37,7 @@ export default function HomeScreen() {
     });
 
     return () => unsubscribe(); // Cleanup on component unmount
-  }, []);
+  }, [selectedCategory]); // Re-run effect if selectedCategory changes
 
   // Function to add a new item to Firestore
   const addItemToList = async () => {
@@ -43,15 +51,6 @@ export default function HomeScreen() {
     try {
       // Add the item to Firestore collection
       const docRef = await addDoc(collection(db, 'groceryLists'), newItemObj);
-
-      // Update local state after successful Firestore addition
-      const updatedList = [...shoppingList, { id: docRef.id, ...newItemObj }];
-      setShoppingList(updatedList);
-      setFilteredShoppingList(updatedList); // Update filtered list as well
-
-      // Update categories with the new item
-      const uniqueCategories = [...new Set(updatedList.map(item => item.houseCodeCategory))];
-      setCategories(uniqueCategories);
 
       // Clear the input fields
       setNewItem('');
@@ -74,6 +73,32 @@ export default function HomeScreen() {
     }
 
     setFilterModalVisible(false); // Close the modal after selecting
+  };
+
+  // Function to toggle the purchased status of an item
+  const togglePurchased = async (itemId, currentStatus) => {
+    try {
+      // Update the purchased status in Firestore
+      const itemRef = doc(db, 'groceryLists', itemId);
+      await updateDoc(itemRef, { isPurchased: !currentStatus });
+
+      // Update the local shoppingList state
+      setShoppingList((prevList) =>
+        prevList.map((item) =>
+          item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
+        )
+      );
+
+      // Apply the same update to filteredShoppingList if a filter is applied
+      setFilteredShoppingList((prevList) =>
+        prevList.map((item) =>
+          item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
+        )
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update item status. Please try again.');
+      console.error(error);
+    }
   };
 
   return (
@@ -107,8 +132,31 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.listItem}>
-            <Text>{item.itemName} - {item.addedBy}</Text>
-            <Text>Category: {item.houseCodeCategory}</Text>
+            
+            <View style={styles.textContainer}>
+              <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
+                {item.itemName}
+              </Text>
+              <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
+                added by {item.addedBy}
+              </Text>
+                <Text style={[item.isPurchased && styles.purchasedText]}>
+                  Category: {item.houseCodeCategory}
+                </Text>
+            </View>
+
+            {/* Radio button to indicate that item has been purchased. */}
+            <TouchableOpacity 
+              style={styles.radioButton}
+              onPress={() => togglePurchased(item.id, item.isPurchased)}
+            >
+              <Ionicons
+                name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
+                size={24}
+                color={item.isPurchased ? 'orange' : 'gray'}
+              />
+            </TouchableOpacity>
+
           </View>
         )}
       />
@@ -170,6 +218,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     marginBottom: 5,
     borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  textContainer: {
+    flexDirection: 'column',
+    flex: 1,
+    marginRight: 10,
+  },
+  purchasedText: {
+    color: 'gray',
+    textDecorationLine: 'line-through',
+  },
+  radioButton: {
+    padding: 5,
+  },
+  itemName: {
+    fontWeight: 'bold',
+  },
+  addedByText: {
+    color: 'gray',
   },
   filterButton: {
     alignSelf: 'flex-end',
