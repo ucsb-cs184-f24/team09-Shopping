@@ -6,7 +6,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 
-const RegisterScreen = () => {
+export default function RegisterScreen() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -97,8 +97,6 @@ const RegisterScreen = () => {
         </KeyboardAvoidingView>
     );
 };
-
-export default RegisterScreen;
 
 const styles = StyleSheet.create({
     container: {

@@ -2,19 +2,13 @@ import { useState } from 'react'
 import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from '../../firebaseConfig';
-import { useNavigation } from '@react-navigation/native';
 
-const LoginScreen = () => {
+export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const navigation = useNavigation();
 
     const handleLogin = () => {
         signInWithEmailAndPassword(auth, email, password)
-        .then(userCredentials => {
-            console.log('Logged in with:', userCredentials.user.email);
-            navigation.navigate("Home");
-        })
         .catch(error => alert(error.message))
     };
 
@@ -60,8 +54,6 @@ const LoginScreen = () => {
         </KeyboardAvoidingView>
     )
 }
-
-export default LoginScreen
 
 const styles = StyleSheet.create({
     container: {
