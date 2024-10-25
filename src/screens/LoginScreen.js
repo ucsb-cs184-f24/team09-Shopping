@@ -9,6 +9,9 @@ export default function LoginScreen({ navigation }) {
 
     const handleLogin = () => {
         signInWithEmailAndPassword(auth, email, password)
+        .then(userCredentials => {
+            console.log('Logged in with:', userCredentials.user.email);
+        })
         .catch(error => alert(error.message))
     };
 
