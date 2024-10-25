@@ -16,7 +16,7 @@ export default function LoginScreen({ navigation }) {
     };
 
     const handleNavigateToRegister = () => {
-        navigation.navigate("Register");
+        navigation.navigate('Register');
     }
 
     return (
