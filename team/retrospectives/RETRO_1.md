@@ -30,3 +30,7 @@ Owen [X]
   
 * My advice would be to keep things open for discussion but actively encourage more diverse input. Also, make sure everyone gets a chance to speak, as this helps bring in new perspectives, and it could lead to more creative ways of overcoming any problems.
 
+
+## Retro Outcomes
+
+This retrospectives helped us improve our communication and teamwork. By getting everyone on the same page about what we’re working on, we’ve reduced confusion and misunderstandings. We now have regular check-ins where team members share updates, making it easier to identify and tackle any issues. Also, having these open talks about what’s going well and what’s tough has helped us trust each other more, making it easier to work together and support one another.

@@ -3,7 +3,7 @@ import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet } from 'reac
 import { auth, db } from '../../firebaseConfig';
 import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function ProfileScreen() {

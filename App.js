@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from "firebase/auth";
-import { NavigationContainer, StackActions } from '@react-navigation/native';
+import { NavigationContainer} from '@react-navigation/native';
 import AuthStack from './src/navigation/AuthStack'
 import AppStack from './src/navigation/AppStack'
 
