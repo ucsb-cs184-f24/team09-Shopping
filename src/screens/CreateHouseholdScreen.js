@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { collection, addDoc, query, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebaseConfig'; // Make sure to use the correct path
+import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../../firebaseConfig'; // Make sure to use the correct path
 
 export default function CreateHouseholdScreen({ navigation }) {
     const [householdName, setHouseholdName] = useState('');
@@ -15,7 +15,11 @@ export default function CreateHouseholdScreen({ navigation }) {
 
     // fetch households from Firestore
     useEffect(() => {
-        const q = query(collection(db, 'households')) // maybe add filters later
+        const q = query(
+            collection(db, 'households'),
+            where('members', 'array-contains', auth.currentUser.uid)
+        ); // maybe add filters later
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const householdList = snapshot.docs
                 .map(doc => ({
@@ -54,6 +58,7 @@ export default function CreateHouseholdScreen({ navigation }) {
                 const docRef = await addDoc(collection(db, 'households'), {
                     householdName,
                     code: generatedCode,
+                    members: [auth.currentUser.uid], // Add current user as the first member
                 });
                 console.log(`Creating household: ${householdName} with code: ${generateCode}`);
                 setHouseholdCode(generatedCode);

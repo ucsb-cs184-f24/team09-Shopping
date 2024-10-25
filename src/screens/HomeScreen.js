@@ -14,7 +14,7 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState('');  // State for selected filter category
   const [categories, setCategories] = useState([]);  // State to hold dynamic categories
 
-  // Fetch real-time updates from Firestore
+  // Listener to update shoppingList on real-time changes
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'groceryLists'), (snapshot) => {
       const lists = snapshot.docs.map((doc) => ({
@@ -23,21 +23,23 @@ export default function HomeScreen() {
       }));
       setShoppingList(lists);
 
-      // Filter list if a category is selected
-      if (selectedCategory) {
-        const filteredList = lists.filter(item => item.houseCodeCategory === selectedCategory);
-        setFilteredShoppingList(filteredList);
-      } else {
-        setFilteredShoppingList(lists); // Show all items when no filter is selected
-      }
-
       // Extract unique categories from the list
       const uniqueCategories = [...new Set(lists.map(item => item.houseCodeCategory))];
       setCategories(uniqueCategories);
     });
 
     return () => unsubscribe(); // Cleanup on component unmount
-  }, [selectedCategory]); // Re-run effect if selectedCategory changes
+  }, []); // No dependencies to ensure it runs only once on mount
+
+  // Separate effect to filter shoppingList based on selectedCategory
+  useEffect(() => {
+    if (selectedCategory) {
+      const filteredList = shoppingList.filter(item => item.houseCodeCategory === selectedCategory);
+      setFilteredShoppingList(filteredList);
+    } else {
+      setFilteredShoppingList(shoppingList);
+    }
+  }, [selectedCategory, shoppingList]); // Re-run when either selectedCategory or shoppingList changes
 
   // Function to add a new item to Firestore
   const addItemToList = async () => {
@@ -64,14 +66,6 @@ export default function HomeScreen() {
   // Function to filter the shopping list based on the selected category
   const filterListByCategory = (category) => {
     setSelectedCategory(category);
-
-    if (category === '') {
-      setFilteredShoppingList(shoppingList); // Show all items when no filter is selected
-    } else {
-      const filteredList = shoppingList.filter(item => item.houseCodeCategory === category);
-      setFilteredShoppingList(filteredList);
-    }
-
     setFilterModalVisible(false); // Close the modal after selecting
   };
 
@@ -84,13 +78,6 @@ export default function HomeScreen() {
 
       // Update the local shoppingList state
       setShoppingList((prevList) =>
-        prevList.map((item) =>
-          item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
-        )
-      );
-
-      // Apply the same update to filteredShoppingList if a filter is applied
-      setFilteredShoppingList((prevList) =>
         prevList.map((item) =>
           item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
         )
