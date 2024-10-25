@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { useNavigation } from '@react-navigation/native';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +12,6 @@ export default function RegisterScreen() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
-    const navigation = useNavigation();
 
     const handleSignUp = async () => {
         if (password != confirmPassword) {
@@ -36,7 +34,6 @@ export default function RegisterScreen() {
             });
 
             console.log('Registered with:', user.email);
-            navigation.navigate('Home');
         } catch (error) {
             alert(error.message);
         }

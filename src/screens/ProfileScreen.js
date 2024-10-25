@@ -3,14 +3,12 @@ import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } fr
 import { auth, db } from '../../firebaseConfig';
 import { updateProfile, signOut } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
   const [name, setName] = useState('');
   const [editMode, setEditMode] = useState(false);
-  const navigation = useNavigation();
 
   // Fetch user data from FireStore
   const fetchUserData = async () => {
