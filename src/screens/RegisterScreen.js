@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { useNavigation } from '@react-navigation/native';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 
-const RegisterScreen = () => {
+export default function RegisterScreen() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
-    const navigation = useNavigation();
 
     const handleSignUp = async () => {
         if (password != confirmPassword) {
@@ -36,7 +34,6 @@ const RegisterScreen = () => {
             });
 
             console.log('Registered with:', user.email);
-            navigation.navigate('Home');
         } catch (error) {
             alert(error.message);
         }
@@ -97,8 +94,6 @@ const RegisterScreen = () => {
         </KeyboardAvoidingView>
     );
 };
-
-export default RegisterScreen;
 
 const styles = StyleSheet.create({
     container: {
