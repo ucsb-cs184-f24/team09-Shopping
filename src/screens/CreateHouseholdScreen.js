@@ -1,10 +1,10 @@
-// TASK 1: once a user creates household, auto-generates code that can be shared to other people
-// (TODO) TASK 2: once household AND Code made, return to householdscreen except they can create another household, and the household that was made is now an icon to click at
-
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { collection, addDoc, query, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebaseConfig'; // Make sure to use the correct path
+import { View, Text, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform} from 'react-native';
+import { collection, addDoc, query, onSnapshot, where, getDocs } from 'firebase/firestore';
+import { db, auth } from '../../firebaseConfig'; // Make sure to use the correct path
+import { getDoc, doc } from 'firebase/firestore';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function CreateHouseholdScreen({ navigation }) {
     const [householdName, setHouseholdName] = useState('');
@@ -13,9 +13,22 @@ export default function CreateHouseholdScreen({ navigation }) {
     const [showCode, setShowCode] = useState(false);
     const [households, setHouseholds] = useState([]);
 
+    useFocusEffect(
+        React.useCallback(() => {
+            setErrorMessage('');
+            setHouseholdName('');
+        }, [])
+    );
+
     // fetch households from Firestore
     useEffect(() => {
-        const q = query(collection(db, 'households')) // maybe add filters later
+        const userId = auth.currentUser.uid;
+
+        const q = query(
+            collection(db, 'households'),
+            where('members', 'array-contains', userId)
+        );
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const householdList = snapshot.docs
                 .map(doc => ({
@@ -23,7 +36,7 @@ export default function CreateHouseholdScreen({ navigation }) {
                     ...doc.data()
                 }))
                 // Filter to include only documents with valid householdName
-                .filter(doc => doc.householdName && doc.householdName.trim() != '');
+                .filter(doc => doc.displayHouseholdName && doc.displayHouseholdName != '');
             
             setHouseholds(householdList);
         }, (error) => {
@@ -43,19 +56,46 @@ export default function CreateHouseholdScreen({ navigation }) {
     }
 
     const createHousehold = async () => {
+        const trimmedName = householdName.trim();
+        const normalizedName = trimmedName.toLowerCase();
+
         if (!householdName.trim()) {
             setErrorMessage('Household name is required.');
         } else {
             setErrorMessage('');
             const generatedCode = generateCode(6);
+            const userId = auth.currentUser.uid; // get current user's ID
 
             // Add household to Firestore
             try {
-                const docRef = await addDoc(collection(db, 'households'), {
-                    householdName,
+                // check if household with same name already exists
+                const householdsRef = collection(db, 'households');
+                const querySnapshot = await getDocs(
+                    query(householdsRef, where('normalizedHouseholdName', '==', normalizedName))
+                );
+
+                if (!querySnapshot.empty) {
+                    setErrorMessage(`${normalizedName} is already taken. Please choose another name.`);
+                    return;
+                }
+                
+                // fetch user's name from 'users' collection
+                const userDocRef = doc(db, 'users', userId);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (!userDocSnap.exists()) {
+                    console.error("User document not found");
+                    return;
+                }
+
+                await addDoc(collection(db, 'households'), {
+                    displayHouseholdName: trimmedName,
+                    normalizedHouseholdName: normalizedName,
                     code: generatedCode,
+                    members: [userId],
                 });
-                console.log(`Creating household: ${householdName} with code: ${generateCode}`);
+
+                console.log(`Creating household: ${trimmedName} with code: ${generateCode}`);
                 setHouseholdCode(generatedCode);
                 setShowCode(false);
                 setHouseholdName(''); // reset input field after creation
@@ -70,7 +110,7 @@ export default function CreateHouseholdScreen({ navigation }) {
             style={styles.householdItem}
             onPress={() => navigation.navigate('HouseholdDetails', { householdId: item.id })}
         >
-            <Text style={styles.householdText}>{item.householdName}</Text>
+            <Text style={styles.householdText}>{item.displayHouseholdName}</Text>
         </TouchableOpacity>
     );
 
@@ -90,7 +130,9 @@ export default function CreateHouseholdScreen({ navigation }) {
                 />
                 {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
                 <View style={styles.buttonContainer}>
-                    <Button title="Create Household" onPress={createHousehold} />
+                    <View style={styles.buttonWrapper}>
+                        <Button title="Create Household" onPress={createHousehold} />
+                    </View>
                 </View>
             </View>
             <View style={styles.listContainer}>
@@ -106,6 +148,13 @@ export default function CreateHouseholdScreen({ navigation }) {
                     <Text style={styles.noHouseholdsText}>No households created yet!</Text>
                 )}
             </View>
+
+            <TouchableOpacity
+                style={styles.fab}
+                onPress={() => navigation.navigate('JoinHousehold')}
+            >
+                <Icon name="add" size={30} color='#fff' />
+            </TouchableOpacity>
         </KeyboardAvoidingView>
     );
 }
@@ -153,6 +202,15 @@ const styles = StyleSheet.create({
         marginBottom: 30,
         width: '90%',
         alignSelf: 'center',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    buttonWrapper: {
+        width: '100%',
+        marginBottom: 15,
+        borderRadius: 25,
+        overflow: 'hidden',
     },
     listContainer: {
         flex: 1,
@@ -174,5 +232,21 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#999',
         marginTop: 20.
+    },
+    fab: {
+        position: 'absolute',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#2196F3',
+        justifyContent: 'center',
+        alignItems: 'center',
+        right: 20,
+        bottom: 20,
+        elevation: 8, // shadow effect on Android
+        shadowColor: '#000', // shadow effect on IOS
+        shadowOffset: { width: 0, height: 2},
+        shadowOpacity: 0.3,
+        shadowRadius: 2,
     },
 });
