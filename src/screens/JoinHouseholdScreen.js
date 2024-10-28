@@ -3,10 +3,18 @@ import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from 'rea
 import { collection, query, where, getDocs, updateDoc, arrayUnion, getDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function JoinHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+
+    useFocusEffect(
+        React.useCallback(() => {
+            setErrorMessage('');
+            setHouseholdCode('');
+        }, [])
+    );
 
     const joinHousehold = async () => {
         const userId = auth.currentUser.uid;
