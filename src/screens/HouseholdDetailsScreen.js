@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
-import { doc, getDoc, updateDoc, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -60,7 +60,18 @@ export default function HouseholdDetailsScreen({ route, navigation }) {
             await updateDoc(householdRef, {
                 members: arrayRemove(userId),
             });
-            Alert.alert("Left Household", `You have successfully left the household: ${household.householdName}.`);
+
+            // check if there are any members left
+            const updatedHouseholdSnap = await getDoc(householdRef);
+            const updatedHouseholdData = updatedHouseholdSnap.data();
+
+            if (updatedHouseholdData.members.length === 0) {
+                await deleteDoc(householdRef);
+                Alert.alert("Household Deleted", `You have successfully left and deleted the household: ${household.displayHouseholdName}.`);
+            } else {
+                Alert.alert("Left Household", `You have successfully left the household: ${household.displayHouseholdName}.`);
+            }
+            
             navigation.navigate("CreateHousehold");
         } catch (error) {
             console.error("Error leaving household: ", error);
@@ -70,7 +81,7 @@ export default function HouseholdDetailsScreen({ route, navigation }) {
 
     const confirmLeaveHousehold = () => {
         Alert.alert(
-            `Leaving ${household.householdName}`,
+            `Leaving ${household.displayHouseholdName}`,
             "Are you sure you want to leave this household?",
             [
                 { text: "Cancel", style: "cancel" },
@@ -93,7 +104,7 @@ export default function HouseholdDetailsScreen({ route, navigation }) {
             </TouchableOpacity>
             {household ? (
                 <>
-                    <Text style={styles.title}>{household.householdName}</Text>
+                    <Text style={styles.title}>{household.displayHouseholdName}</Text>
                     <Text>Code: {household.code}</Text>
                     <Text style={styles.subtitle}>Members:</Text>
                     <FlatList 

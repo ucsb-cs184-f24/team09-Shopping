@@ -4,6 +4,7 @@ import { collection, addDoc, query, onSnapshot, where, getDocs } from 'firebase/
 import { db, auth } from '../../firebaseConfig'; // Make sure to use the correct path
 import { getDoc, doc } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function CreateHouseholdScreen({ navigation }) {
     const [householdName, setHouseholdName] = useState('');
@@ -11,6 +12,13 @@ export default function CreateHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
     const [showCode, setShowCode] = useState(false);
     const [households, setHouseholds] = useState([]);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            setErrorMessage('');
+            setHouseholdName('');
+        }, [])
+    );
 
     // fetch households from Firestore
     useEffect(() => {
@@ -28,7 +36,7 @@ export default function CreateHouseholdScreen({ navigation }) {
                     ...doc.data()
                 }))
                 // Filter to include only documents with valid householdName
-                .filter(doc => doc.householdName && doc.householdName.trim() != '');
+                .filter(doc => doc.displayHouseholdName && doc.displayHouseholdName != '');
             
             setHouseholds(householdList);
         }, (error) => {
@@ -48,6 +56,9 @@ export default function CreateHouseholdScreen({ navigation }) {
     }
 
     const createHousehold = async () => {
+        const trimmedName = householdName.trim();
+        const normalizedName = trimmedName.toLowerCase();
+
         if (!householdName.trim()) {
             setErrorMessage('Household name is required.');
         } else {
@@ -60,11 +71,11 @@ export default function CreateHouseholdScreen({ navigation }) {
                 // check if household with same name already exists
                 const householdsRef = collection(db, 'households');
                 const querySnapshot = await getDocs(
-                    query(householdsRef, where('householdName', '==', householdName))
+                    query(householdsRef, where('normalizedHouseholdName', '==', normalizedName))
                 );
 
                 if (!querySnapshot.empty) {
-                    setErrorMessage(`${householdName} is already taken. Please choose another name.`);
+                    setErrorMessage(`${normalizedName} is already taken. Please choose another name.`);
                     return;
                 }
                 
@@ -78,12 +89,13 @@ export default function CreateHouseholdScreen({ navigation }) {
                 }
 
                 await addDoc(collection(db, 'households'), {
-                    householdName,
+                    displayHouseholdName: trimmedName,
+                    normalizedHouseholdName: normalizedName,
                     code: generatedCode,
                     members: [userId],
                 });
 
-                console.log(`Creating household: ${householdName} with code: ${generateCode}`);
+                console.log(`Creating household: ${trimmedName} with code: ${generateCode}`);
                 setHouseholdCode(generatedCode);
                 setShowCode(false);
                 setHouseholdName(''); // reset input field after creation
@@ -98,7 +110,7 @@ export default function CreateHouseholdScreen({ navigation }) {
             style={styles.householdItem}
             onPress={() => navigation.navigate('HouseholdDetails', { householdId: item.id })}
         >
-            <Text style={styles.householdText}>{item.householdName}</Text>
+            <Text style={styles.householdText}>{item.displayHouseholdName}</Text>
         </TouchableOpacity>
     );
 

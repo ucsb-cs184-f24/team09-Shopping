@@ -3,10 +3,18 @@ import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from 'rea
 import { collection, query, where, getDocs, updateDoc, arrayUnion, getDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function JoinHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+
+    useFocusEffect(
+        React.useCallback(() => {
+            setErrorMessage('');
+            setHouseholdCode('');
+        }, [])
+    );
 
     const joinHousehold = async () => {
         const userId = auth.currentUser.uid;
@@ -38,7 +46,7 @@ export default function JoinHouseholdScreen({ navigation }) {
             const householdData = householdDoc.data();
 
             if (householdData.members.includes(userId)) {
-                setErrorMessage(`Already in household ${householdData.householdName}`)
+                setErrorMessage(`Already in household ${householdData.displayHouseholdName}`)
                 return;
             }
 
@@ -46,7 +54,7 @@ export default function JoinHouseholdScreen({ navigation }) {
                 members: arrayUnion(userId),
             });
 
-            console.log(`User ${userName} joined household ${householdDoc.id}`);
+            console.log(`User ${userName} joined household ${householdDoc.displayHouseholdName}`);
             navigation.navigate('CreateHousehold');
         } catch (error) {
             console.log("Error joining household: ", error);
