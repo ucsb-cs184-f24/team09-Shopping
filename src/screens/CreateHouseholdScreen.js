@@ -16,6 +16,7 @@ export default function CreateHouseholdScreen({ navigation }) {
     useFocusEffect(
         React.useCallback(() => {
             setErrorMessage('');
+            setHouseholdName('');
         }, [])
     );
 
