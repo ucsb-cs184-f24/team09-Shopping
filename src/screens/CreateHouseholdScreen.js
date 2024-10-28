@@ -58,52 +58,65 @@ export default function CreateHouseholdScreen({ navigation }) {
     const createHousehold = async () => {
         const trimmedName = householdName.trim();
         const normalizedName = trimmedName.toLowerCase();
-
+    
         if (!householdName.trim()) {
             setErrorMessage('Household name is required.');
         } else {
             setErrorMessage('');
             const generatedCode = generateCode(6);
             const userId = auth.currentUser.uid; // get current user's ID
-
+    
             // Add household to Firestore
             try {
-                // check if household with same name already exists
+                // Check if household with the same name already exists
                 const householdsRef = collection(db, 'households');
                 const querySnapshot = await getDocs(
                     query(householdsRef, where('normalizedHouseholdName', '==', normalizedName))
                 );
-
+    
                 if (!querySnapshot.empty) {
                     setErrorMessage(`${normalizedName} is already taken. Please choose another name.`);
                     return;
                 }
                 
-                // fetch user's name from 'users' collection
+                // Fetch user's name from 'users' collection
                 const userDocRef = doc(db, 'users', userId);
                 const userDocSnap = await getDoc(userDocRef);
-
+    
                 if (!userDocSnap.exists()) {
                     console.error("User document not found");
                     return;
                 }
-
-                await addDoc(collection(db, 'households'), {
+    
+                // Add the household to Firestore
+                const householdRef = await addDoc(collection(db, 'households'), {
                     displayHouseholdName: trimmedName,
                     normalizedHouseholdName: normalizedName,
                     code: generatedCode,
                     members: [userId],
                 });
-
-                console.log(`Creating household: ${trimmedName} with code: ${generateCode}`);
+        
+                // Conditionally create the grocery list only if there are items
+                const initialItems = []; // Replace with any items you want to add initially
+                if (initialItems.length > 0) {
+                    await addDoc(collection(db, `households/${householdRef.id}/groceryLists`), {
+                        listName: 'Default Grocery List',
+                        createdDate: new Date(),
+                        items: initialItems,
+                    });
+                    console.log(`Created initial grocery list for household: ${householdRef.id}`);
+                }
+    
+                console.log(`Created household: ${trimmedName} with code: ${generatedCode}`);
                 setHouseholdCode(generatedCode);
                 setShowCode(false);
-                setHouseholdName(''); // reset input field after creation
+                setHouseholdName(''); // Reset input field after creation
             } catch (error) {
                 console.error("Error creating household: ", error);
             }
         }
     };
+    
 
     const renderHousehold = ({ item }) => (
         <TouchableOpacity
