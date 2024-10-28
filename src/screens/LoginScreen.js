@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from '../../firebaseConfig';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [passwordVisible, setPasswordVisible] = useState(false);
 
     const handleLogin = () => {
         signInWithEmailAndPassword(auth, email, password)
@@ -31,13 +33,18 @@ export default function LoginScreen({ navigation }) {
                     onChangeText={text => setEmail(text)}
                     style={styles.input}
                 />
-                <TextInput
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={text => setPassword(text)}
-                    style={styles.input}
-                    secureTextEntry
-                />
+                <View style={styles.passwordContainer}>
+                    <TextInput
+                        placeholder="Password"
+                        value={password}
+                        onChangeText={text => setPassword(text)}
+                        style={styles.passwordInput}
+                        secureTextEntry={!passwordVisible}
+                    />
+                    <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+                        <Ionicons name={passwordVisible ? "eye" : "eye-off"} size={24} color="black" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.buttonContainer}>
@@ -73,6 +80,22 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderRadius: 10,
         marginTop: 5
+    },
+    passwordContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 4,
+        marginTop: 5,
+        paddingHorizontal: 10,
+        backgroundColor: 'white',
+    },
+    passwordInput: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 5,
     },
     buttonContainer: {
         width: '60%',
