@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
-import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { getAuth, deleteUser, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, setDoc, getFirestore } from 'firebase/firestore';
+
+// TODO: implement feature for user to delete their account
 
 export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
@@ -147,6 +149,38 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    const auth = getAuth();
+    const db = getFirestore();
+    const user = auth.currentUser;
+
+    if (user) {
+      Alert.alert(
+        "Delete Account",
+        "Are you sure you want to delete this account?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Yes",
+            onPress: async () => {
+              try {
+                const userDocRef = doc(db, "users", user.uid);
+                await deleteDoc(userDocRef);
+  
+                await deleteUser(user);
+  
+                Alert.alert("Account Deleted", "Your account has been deleted successfully.");
+              } catch (error) {
+                Alert.alert("Error", "There was an error deleting your account. Please try again.");
+                console.error("Error deleting account:", error);
+              }
+            }
+          }
+        ]
+      );
+    }
+  }
+
   const enterEditMode = (fieldKey) => {
     setOriginalData({
       name,
@@ -267,6 +301,11 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
+
+      {/* Delete Account button */}
+      <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+        <Text style={styles.deleteAccountText}>Delete Account</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -368,7 +407,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   creationDateContainer: {
-    marginTop: 300,
+    marginTop: 250,
     alignItems: 'center',
   },
   creationDateText: {
@@ -378,12 +417,27 @@ const styles = StyleSheet.create({
   signOutButton: {
     marginTop: 20,
     padding: 10,
+    backgroundColor: '#0056D2',
+    borderRadius: 5,
+    width: '80%',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#003a8c',
+  },
+  signOutText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  deleteAccountButton: {
+    marginTop: 20,
+    padding: 10,
     backgroundColor: '#f44336',
     borderRadius: 5,
     width: '80%',
     alignItems: 'center',
   },
-  signOutText: {
+  deleteAccountText: {
     color: 'white',
     fontWeight: '700',
     fontSize: 16,
