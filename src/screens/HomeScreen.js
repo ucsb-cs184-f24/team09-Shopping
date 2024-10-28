@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore'; 
+import { Swipeable } from 'react-native-gesture-handler'; // Import Swipeable
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,8 @@ export default function HomeScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);  // State for modal visibility
   const [selectedCategory, setSelectedCategory] = useState('');  // State for selected filter category
   const [categories, setCategories] = useState([]);  // State to hold dynamic categories
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [currentEditItem, setCurrentEditItem] = useState(null); // State to hold the item being edited
 
   // Fetch real-time updates from Firestore
   useEffect(() => {
@@ -61,6 +64,46 @@ export default function HomeScreen() {
     }
   };
 
+  // Function to delete an item
+  const deleteItem = async (itemId) => {
+    try {
+      await deleteDoc(doc(db, 'groceryLists', itemId));
+      setShoppingList((prevList) => prevList.filter((item) => item.id !== itemId));
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete item. Please try again.');
+      console.error(error);
+    }
+  };
+
+  // Function to open edit modal
+  const openEditModal = (item) => {
+    setCurrentEditItem(item);
+    setNewItem(item.itemName);
+    setNewItemCategory(item.houseCodeCategory);
+    setEditModalVisible(true);
+  };
+
+  // Function to save edited item
+  const saveEdit = async () => {
+    if (!currentEditItem) return;
+    try {
+      const itemRef = doc(db, 'groceryLists', currentEditItem.id);
+      await updateDoc(itemRef, { itemName: newItem, houseCodeCategory: newItemCategory });
+
+      setShoppingList((prevList) =>
+        prevList.map((item) =>
+          item.id === currentEditItem.id ? { ...item, itemName: newItem, houseCodeCategory: newItemCategory } : item
+        )
+      );
+      setEditModalVisible(false);
+      setNewItem('');
+      setNewItemCategory('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save changes. Please try again.');
+      console.error(error);
+    }
+  };
+
   // Function to filter the shopping list based on the selected category
   const filterListByCategory = (category) => {
     setSelectedCategory(category);
@@ -74,6 +117,24 @@ export default function HomeScreen() {
 
     setFilterModalVisible(false); // Close the modal after selecting
   };
+
+  // Render edit and delete buttons for Swipeable
+  const renderRightActions = (item) => (
+    <View style={{ flexDirection: 'row' }}>
+      <TouchableOpacity
+        style={styles.editButton}
+        onPress={() => openEditModal(item)}
+      >
+        <Text style={styles.actionText}>Edit</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => deleteItem(item.id)}
+      >
+        <Text style={styles.actionText}>Delete</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   // Function to toggle the purchased status of an item
   const togglePurchased = async (itemId, currentStatus) => {
@@ -131,35 +192,64 @@ export default function HomeScreen() {
         data={filteredShoppingList}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.listItem}>
-            
-            <View style={styles.textContainer}>
-              <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
-                {item.itemName}
-              </Text>
-              <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
-                added by {item.addedBy}
-              </Text>
+          <Swipeable renderRightActions={() => renderRightActions(item)}>
+            <View style={styles.listItem}>
+              <View style={styles.textContainer}>
+                <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
+                  {item.itemName}
+                </Text>
+                <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
+                  added by {item.addedBy}
+                </Text>
                 <Text style={[item.isPurchased && styles.purchasedText]}>
                   Category: {item.houseCodeCategory}
                 </Text>
+              </View>
+              
+              {/* Radio button to indicate that item has been purchased */}
+              <TouchableOpacity 
+                style={styles.radioButton}
+                onPress={() => togglePurchased(item.id, item.isPurchased)}
+              >
+                <Ionicons
+                  name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
+                  size={24}
+                  color={item.isPurchased ? 'orange' : 'gray'}
+                />
+              </TouchableOpacity>
             </View>
-
-            {/* Radio button to indicate that item has been purchased. */}
-            <TouchableOpacity 
-              style={styles.radioButton}
-              onPress={() => togglePurchased(item.id, item.isPurchased)}
-            >
-              <Ionicons
-                name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
-                size={24}
-                color={item.isPurchased ? 'orange' : 'gray'}
-              />
-            </TouchableOpacity>
-
-          </View>
+          </Swipeable>
         )}
       />
+
+      {/* Edit Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.editModalContent}>
+            <TextInput
+              style={styles.input}
+              placeholder="Edit item name"
+              value={newItem}
+              onChangeText={setNewItem}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Edit category"
+              value={newItemCategory}
+              onChangeText={setNewItemCategory}
+            />
+            <View style={styles.buttonContainer}>
+              <Button title="Save" onPress={saveEdit} />
+              <Button title="Cancel" onPress={() => setEditModalVisible(false)} color="red" />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal for filter selection */}
       <Modal
@@ -169,7 +259,7 @@ export default function HomeScreen() {
         onRequestClose={() => setFilterModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+          <View style={styles.filterModalContent}>
             {/* Header Row with 'Select a Category' and 'Close' Button */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select a Category</Text>
@@ -255,7 +345,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  modalContent: {
+  editModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    justifyContent: 'center',
+    height: '25%',
+  },
+  filterModalContent: {
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 10,
@@ -275,5 +373,37 @@ const styles = StyleSheet.create({
   picker: {
     height: 150, // Increased picker height to accommodate more options
     width: '100%',
+  },
+  editButton: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    marginBottom: 5,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFD700',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+    marginRight: 2,
+  },
+  deleteButton: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    marginBottom: 5,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF6347',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+  },
+  actionText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
