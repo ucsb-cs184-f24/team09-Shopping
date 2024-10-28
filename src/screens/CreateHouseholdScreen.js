@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform} from 'react-native';
-import { collection, addDoc, query, onSnapshot, where } from 'firebase/firestore';
+import { collection, addDoc, query, onSnapshot, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig'; // Make sure to use the correct path
 import { getDoc, doc } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -57,6 +57,17 @@ export default function CreateHouseholdScreen({ navigation }) {
 
             // Add household to Firestore
             try {
+                // check if household with same name already exists
+                const householdsRef = collection(db, 'households');
+                const querySnapshot = await getDocs(
+                    query(householdsRef, where('householdName', '==', householdName))
+                );
+
+                if (!querySnapshot.empty) {
+                    setErrorMessage(`${householdName} is already taken. Please choose another name.`);
+                    return;
+                }
+                
                 // fetch user's name from 'users' collection
                 const userDocRef = doc(db, 'users', userId);
                 const userDocSnap = await getDoc(userDocRef);

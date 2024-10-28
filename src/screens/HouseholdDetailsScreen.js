@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { doc, getDoc, updateDoc, arrayRemove } from 'firebase/firestore';
-import { useFocusEffect } from '@react-navigation/native';
 import { db, auth } from '../../firebaseConfig';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
