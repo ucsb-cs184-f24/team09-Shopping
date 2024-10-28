@@ -38,7 +38,7 @@ export default function JoinHouseholdScreen({ navigation }) {
             const householdData = householdDoc.data();
 
             if (householdData.members.includes(userId)) {
-                setErrorMessage(`Already in household ${householdData.householdName}`)
+                setErrorMessage(`Already in household ${householdData.displayHouseholdName}`)
                 return;
             }
 
@@ -46,7 +46,7 @@ export default function JoinHouseholdScreen({ navigation }) {
                 members: arrayUnion(userId),
             });
 
-            console.log(`User ${userName} joined household ${householdDoc.id}`);
+            console.log(`User ${userName} joined household ${householdDoc.displayHouseholdName}`);
             navigation.navigate('CreateHousehold');
         } catch (error) {
             console.log("Error joining household: ", error);
