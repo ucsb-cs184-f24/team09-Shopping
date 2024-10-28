@@ -88,14 +88,22 @@ export default function CreateHouseholdScreen({ navigation }) {
                     return;
                 }
 
-                await addDoc(collection(db, 'households'), {
+                // Add the household to Firestore
+                const householdRef = await addDoc(collection(db, 'households'), {
                     displayHouseholdName: trimmedName,
                     normalizedHouseholdName: normalizedName,
                     code: generatedCode,
                     members: [userId],
                 });
 
-                console.log(`Creating household: ${trimmedName} with code: ${generateCode}`);
+                await addDoc(collection(db, `households/${householdRef.id}/groceryLists`), {
+                    listName: 'Default Grocery List',
+                    createdDate: new Date(),
+                });
+                
+                console.log(`Created initial grocery list for household: ${householdRef.id}`);
+                console.log(`Created household: ${trimmedName} with code: ${generatedCode}`);
+
                 setHouseholdCode(generatedCode);
                 setShowCode(false);
                 setHouseholdName(''); // reset input field after creation

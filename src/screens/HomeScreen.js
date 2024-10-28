@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler'; // Import Swipeable
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore'; 
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where} from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
 import { Ionicons } from '@expo/vector-icons';
@@ -16,31 +16,54 @@ export default function HomeScreen() {
   const [categories, setCategories] = useState([]);  // State to hold dynamic categories
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [currentEditItem, setCurrentEditItem] = useState(null); // State to hold the item being edited
+  const [selectedHousehold, setSelectedHousehold] = useState('');  // Selected household ID
+  const [households, setHouseholds] = useState([]);  // All households for the user
+  const [householdModalVisible, setHouseholdModalVisible] = useState(false);
 
-  // Fetch real-time updates from Firestore
+  // Fetch the households associated with the user
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'groceryLists'), (snapshot) => {
-      const lists = snapshot.docs.map((doc) => ({
+    const userId = auth.currentUser.uid;
+    const q = query(collection(db, 'households'), where('members', 'array-contains', userId));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const userHouseholds = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
       }));
-      setShoppingList(lists);
+      setHouseholds(userHouseholds);
+    });
 
-      // Filter list if a category is selected
-      if (selectedCategory) {
-        const filteredList = lists.filter(item => item.houseCodeCategory === selectedCategory);
-        setFilteredShoppingList(filteredList);
-      } else {
-        setFilteredShoppingList(lists); // Show all items when no filter is selected
-      }
+    return () => unsubscribe();
+  }, []);
 
-      // Extract unique categories from the list
-      const uniqueCategories = [...new Set(lists.map(item => item.houseCodeCategory))];
+  // Fetch grocery lists for the selected household
+  useEffect(() => {
+    if (!selectedHousehold) return;
+
+    const q = collection(db, `households/${selectedHousehold}/groceryLists`);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const listItems = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setShoppingList(listItems);
+
+      // Extract unique categories from the list for the current household
+      const uniqueCategories = [...new Set(listItems.map(item => item.houseCodeCategory))];
       setCategories(uniqueCategories);
     });
 
-    return () => unsubscribe(); // Cleanup on component unmount
-  }, [selectedCategory]); // Re-run effect if selectedCategory changes
+    return () => unsubscribe();
+  }, [selectedHousehold]);
+
+  useEffect(() => {
+    if (selectedCategory) {
+      const filteredList = shoppingList.filter(item => item.houseCodeCategory === selectedCategory);
+      setFilteredShoppingList(filteredList);
+    } else {
+      setFilteredShoppingList(shoppingList);
+    }
+  }, [selectedCategory, shoppingList]); // Re-run when either selectedCategory or shoppingList changes
 
   // Function to add a new item to Firestore
   const addItemToList = async () => {
@@ -49,13 +72,16 @@ export default function HomeScreen() {
       return;
     }
 
-    const newItemObj = { itemName: newItem, addedBy: auth.currentUser.email, isPurchased: false, addedDate: Date.now().toString(), houseCodeCategory: newItemCategory };
+    const newItemObj = {
+      itemName: newItem,
+      category: newItemCategory,
+      addedBy: auth.currentUser.email,
+      isPurchased: false,
+      addedDate: new Date(),
+    };
 
     try {
-      // Add the item to Firestore collection
-      const docRef = await addDoc(collection(db, 'groceryLists'), newItemObj);
-
-      // Clear the input fields
+      await addDoc(collection(db, `households/${selectedHousehold}/groceryLists`), newItemObj);
       setNewItem('');
       setNewItemCategory('');
     } catch (error) {
@@ -64,10 +90,9 @@ export default function HomeScreen() {
     }
   };
 
-  // Function to delete an item
   const deleteItem = async (itemId) => {
     try {
-      await deleteDoc(doc(db, 'groceryLists', itemId));
+      await deleteDoc(doc(db, `households/${selectedHousehold}/groceryLists/${itemId}`));
       setShoppingList((prevList) => prevList.filter((item) => item.id !== itemId));
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item. Please try again.');
@@ -87,7 +112,7 @@ export default function HomeScreen() {
   const saveEdit = async () => {
     if (!currentEditItem) return;
     try {
-      const itemRef = doc(db, 'groceryLists', currentEditItem.id);
+      const itemRef = doc(db, `households/${selectedHousehold}/groceryLists`, currentEditItem.id);
       await updateDoc(itemRef, { itemName: newItem, houseCodeCategory: newItemCategory });
 
       setShoppingList((prevList) =>
@@ -107,14 +132,6 @@ export default function HomeScreen() {
   // Function to filter the shopping list based on the selected category
   const filterListByCategory = (category) => {
     setSelectedCategory(category);
-
-    if (category === '') {
-      setFilteredShoppingList(shoppingList); // Show all items when no filter is selected
-    } else {
-      const filteredList = shoppingList.filter(item => item.houseCodeCategory === category);
-      setFilteredShoppingList(filteredList);
-    }
-
     setFilterModalVisible(false); // Close the modal after selecting
   };
 
@@ -140,18 +157,11 @@ export default function HomeScreen() {
   const togglePurchased = async (itemId, currentStatus) => {
     try {
       // Update the purchased status in Firestore
-      const itemRef = doc(db, 'groceryLists', itemId);
+      const itemRef = doc(db, `households/${selectedHousehold}/groceryLists`, itemId);
       await updateDoc(itemRef, { isPurchased: !currentStatus });
 
       // Update the local shoppingList state
       setShoppingList((prevList) =>
-        prevList.map((item) =>
-          item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
-        )
-      );
-
-      // Apply the same update to filteredShoppingList if a filter is applied
-      setFilteredShoppingList((prevList) =>
         prevList.map((item) =>
           item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
         )
@@ -162,9 +172,18 @@ export default function HomeScreen() {
     }
   };
 
+  const selectHousehold = (householdId) => {
+    setSelectedHousehold(householdId);
+    setHouseholdModalVisible(false);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Shopping List</Text>
+
+      <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
+        <Text style={styles.householdButtonText}>Select Household</Text>
+      </TouchableOpacity>
       
       <TextInput
         style={styles.input}
@@ -279,6 +298,32 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal for household selection */}
+      <Modal visible={householdModalVisible} animationType="slide" transparent={true} onRequestClose={() => setHouseholdModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.filterModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select a Household</Text>
+              <Button title="Close" onPress={() => setHouseholdModalVisible(false)} />
+            </View>
+            <Picker
+              selectedValue={selectedHousehold}
+              onValueChange={(itemValue) => selectHousehold(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select Household" value="" />
+              {households.map((household) => (
+                <Picker.Item
+                  key={household.id}
+                  label={household.displayHouseholdName || "Unnamed Household"}
+                  value={household.id}
+                />
+              ))}
+            </Picker>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -340,6 +385,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  householdButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#28a745',
+    padding: 10,
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  householdButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -362,44 +418,34 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between', // Places 'Select a Category' on the left and 'Close' button on the right
-    alignItems: 'center', // Centers the items vertically in the row
-    marginBottom: 20, // Adds some spacing between the header and the Picker
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
   },
   picker: {
-    height: 150, // Increased picker height to accommodate more options
+    height: 150,
     width: '100%',
   },
   editButton: {
     padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    marginBottom: 5,
-    borderRadius: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFD700',
     justifyContent: 'center',
     alignItems: 'center',
     width: 70,
     marginRight: 2,
+    borderRadius: 4,
   },
   deleteButton: {
     padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    marginBottom: 5,
-    borderRadius: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FF6347',
     justifyContent: 'center',
     alignItems: 'center',
     width: 70,
+    borderRadius: 4,
   },
   actionText: {
     color: 'white',
