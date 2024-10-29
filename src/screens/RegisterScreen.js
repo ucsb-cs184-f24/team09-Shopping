@@ -4,8 +4,9 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-export default function RegisterScreen() {
+export default function RegisterScreen({ navigation }) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -38,7 +39,11 @@ export default function RegisterScreen() {
 
             console.log('Registered with:', user.email);
         } catch (error) {
-            alert(error.message);
+            if (error.code === 'auth/email-already-in-use') {
+                alert('This email is already associated with an account.');
+            } else {
+                alert(error.message);
+            }
         }
     };
 
@@ -61,6 +66,14 @@ export default function RegisterScreen() {
             style={styles.container}
             behavior="padding"
         >
+
+            <View style={styles.backButtonContainer}>
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                    <Icon name="arrow-back" size={24} color="#000" />
+                    <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+            </View>
+
             <View style={styles.inputContainer}>
                 <TextInput
                     placeholder="Name"
@@ -176,5 +189,20 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '700',
         fontSize: 16
+    },
+    backButtonContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        position: 'absolute',
+        top: 40,
+        left: 20,
+    },
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    backButtonText: {
+        fontSize: 16,
+        marginLeft: 5,
     },
 });
