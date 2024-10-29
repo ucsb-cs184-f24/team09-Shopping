@@ -1,12 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, Button, View, Text, TextInput, Alert, TouchableOpacity, StyleSheet } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
 import { getAuth, deleteUser, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { deleteDoc, doc, getDoc, setDoc, getFirestore } from 'firebase/firestore';
-
-// TODO: implement feature for user to delete their account
 
 export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
@@ -25,6 +23,8 @@ export default function ProfileScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [currentPasswordVisible, setCurrentPasswordVisible] = useState(false);
   const [creationDate, setCreationDate] = useState(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [confirmationText, setConfirmationText] = useState('');
 
   // Fetch user data from Firestore
   const fetchUserData = async () => {
@@ -128,6 +128,19 @@ export default function ProfileScreen() {
     }
   };
 
+  const formatPhoneNumber = (text) => {
+    // remove all non-numeric characters
+    const cleaned = ('' + text).replace(/\D/g, '');
+
+    // format number as ###-###-####
+    const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
+    if (match) {
+        return `${match[1]}${match[2] ? '-' + match[2] : ''}${match[3] ? '-' + match[3] : ''}`;
+    }
+
+    return text;
+  }
+
   const handleSignOut = () => {
     Alert.alert(
       "Sign Out",
@@ -150,36 +163,30 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDeleteAccount = async () => {
     const auth = getAuth();
     const db = getFirestore();
     const user = auth.currentUser;
+    if (confirmationText === 'DELETE') {
+      try {
+        const userDocRef = doc(db, "users", user.uid);
+        await deleteDoc(userDocRef);
 
-    if (user) {
-      Alert.alert(
-        "Delete Account",
-        "Are you sure you want to delete this account?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Yes",
-            onPress: async () => {
-              try {
-                const userDocRef = doc(db, "users", user.uid);
-                await deleteDoc(userDocRef);
-  
-                await deleteUser(user);
-  
-                Alert.alert("Account Deleted", "Your account has been deleted successfully.");
-              } catch (error) {
-                Alert.alert("Error", "There was an error deleting your account. Please try again.");
-                console.error("Error deleting account:", error);
-              }
-            }
-          }
-        ]
-      );
+        await deleteUser(user);
+
+        Alert.alert("Account Deleted", "Your account has been deleted successfully.");
+        setDeleteModalVisible(false);
+        setConfirmationText('');
+      } catch (error) {
+        Alert.alert("Error", "There was an error deleting your account. Please try again.", error);
+      }
+    } else {
+      Alert.alert("Error", "Please type 'DELETE' to confirm.");
     }
-  }
+  };
 
   const enterEditMode = (fieldKey) => {
     setOriginalData({
@@ -208,7 +215,13 @@ export default function ProfileScreen() {
             style={styles.input}
             placeholder={`Enter your ${label.toLowerCase()}`}
             value={value}
-            onChangeText={setValue}
+            onChangeText={(text) => {
+              if (fieldKey === "phone") {
+                setValue(formatPhoneNumber(text));
+              } else {
+                setValue(text);
+              }
+            }}
           />
           <View style={styles.buttonRow}>
             <TouchableOpacity onPress={() => updateUserInfo(fieldKey)} style={styles.saveButton}>
@@ -306,9 +319,34 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
         <Text style={styles.deleteAccountText}>Delete Account</Text>
       </TouchableOpacity>
+
+      {/* Modal for confirmation */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent={true}
+        animationType='slide'
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Type "DELETE to confirm</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder='Type DELETE to confirm'
+              value={confirmationText}
+              onChangeText={setConfirmationText}
+            />
+            <TouchableOpacity style={styles.confirmButton} onPress={confirmDeleteAccount}>
+              <Text style={styles.confirmButtonText}>Confirm Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelDeleteButton} onPress={() => setDeleteModalVisible(false)}>
+              <Text style={styles.cancelDeleteButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -438,6 +476,61 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteAccountText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  textInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+    confirmButton: {
+    backgroundColor: '#f44336',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  confirmButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  cancelDeleteButton: {
+    backgroundColor: '#a9a9a9',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    width: '100%',
+    alignItems: 'center',
+  },
+  cancelDeleteButtonText: {
     color: 'white',
     fontWeight: '700',
     fontSize: 16,
