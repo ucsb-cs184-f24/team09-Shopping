@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler'; // Import Swipeable
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where} from 'firebase/firestore'; 
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, arrayUnion, deleteDoc, query, where} from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
 import { Ionicons } from '@expo/vector-icons';
+
+
+
 
 export default function HomeScreen() {
   const [shoppingList, setShoppingList] = useState([]);  // State for shopping list
   const [filteredShoppingList, setFilteredShoppingList] = useState([]);  // State for filtered shopping list
   const [newItem, setNewItem] = useState('');  // State for new item input
   const [newItemCategory, setNewItemCategory] = useState('');
+  const [newItemCost, setNewItemCost] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);  // State for modal visibility
   const [selectedCategory, setSelectedCategory] = useState('');  // State for selected filter category
   const [categories, setCategories] = useState([]);  // State to hold dynamic categories
@@ -19,6 +23,16 @@ export default function HomeScreen() {
   const [selectedHousehold, setSelectedHousehold] = useState('');  // Selected household ID
   const [households, setHouseholds] = useState([]);  // All households for the user
   const [householdModalVisible, setHouseholdModalVisible] = useState(false);
+  const [splitModalVisible, setSplitModalVisible] = useState(false);
+  const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false);
+  const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [householdMembers, setHouseholdMembers] = useState([]);
+
+
+
+
 
   // Fetch the households associated with the user
   useEffect(() => {
@@ -36,12 +50,20 @@ export default function HomeScreen() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (selectedHousehold) {
+      getHouseholdMembersInfo(selectedHousehold); // Fetch and update the members info
+    }
+  }, [selectedHousehold]);
+  
+
   // Fetch grocery lists for the selected household
   useEffect(() => {
     if (!selectedHousehold) return;
 
     const q = collection(db, `households/${selectedHousehold}/groceryLists`);
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      getHouseholdMembersInfo(selectedHousehold);
       const listItems = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
@@ -65,9 +87,52 @@ export default function HomeScreen() {
     }
   }, [selectedCategory, shoppingList]); // Re-run when either selectedCategory or shoppingList changes
 
+
+
+  const getHouseholdMembersInfo = async (householdId) => {
+    const householdDocRef = doc(db, 'households', householdId);
+    const householdDoc = await getDoc(householdDocRef);
+  
+    if (householdDoc.exists()) {
+      const members = householdDoc.data().members;
+  
+      // Fetch user data for each member
+      const membersInfo = await Promise.all(
+        members.map(async (uid) => {
+          try {
+            const userDocRef = doc(db, 'users', uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              return { uid, name: userDoc.data().name };
+            } else {
+              console.warn(`No user found with UID: ${uid}`);
+            }
+          } catch (error) {
+            console.error(`Failed to fetch user with UID: ${uid}`, error);
+          }
+          return null;
+        })
+      );
+  
+      setHouseholdMembers(membersInfo.filter(info => info !== null));
+    } else {
+      console.log('No such household!');
+    }
+  };
+  
+  const joinHousehold = async (householdId, userId) => {
+    const householdDocRef = doc(db, 'households', householdId);
+    await updateDoc(householdDocRef, {
+      members: arrayUnion(userId) // Ensure this userId is the correct Firebase UID
+    });
+  };
+  
+  
   // Function to add a new item to Firestore
+
+  
   const addItemToList = async () => {
-    if (newItem.trim() === '' || newItemCategory.trim() === '') {
+    if (newItem.trim() === '' || newItemCategory.trim() === '' || newItemCost.trim() === '') {
       Alert.alert('Error', 'Please enter an item and its category');
       return;
     }
@@ -75,6 +140,7 @@ export default function HomeScreen() {
     const newItemObj = {
       itemName: newItem,
       category: newItemCategory,
+      cost: parseFloat(newItemCost),
       addedBy: auth.currentUser.email,
       isPurchased: false,
       addedDate: new Date(),
@@ -84,12 +150,17 @@ export default function HomeScreen() {
       await addDoc(collection(db, `households/${selectedHousehold}/groceryLists`), newItemObj);
       setNewItem('');
       setNewItemCategory('');
+      setNewItemCost('');
     } catch (error) {
       Alert.alert('Error', 'Failed to add item. Please try again.');
       console.error(error);
     }
   };
 
+
+
+  
+  
   const deleteItem = async (itemId) => {
     try {
       await deleteDoc(doc(db, `households/${selectedHousehold}/groceryLists/${itemId}`));
@@ -105,6 +176,7 @@ export default function HomeScreen() {
     setCurrentEditItem(item);
     setNewItem(item.itemName);
     setNewItemCategory(item.houseCodeCategory);
+    setNewItemCost(item.cost);
     setEditModalVisible(true);
   };
 
@@ -123,11 +195,36 @@ export default function HomeScreen() {
       setEditModalVisible(false);
       setNewItem('');
       setNewItemCategory('');
+      setNewItemCost('');
     } catch (error) {
       Alert.alert('Error', 'Failed to save changes. Please try again.');
       console.error(error);
     }
   };
+
+  const splitBill = () => {
+    if (selectedMembers.length === 0) {
+      Alert.alert('Error', 'Please select at least one member to split the bill.');
+      return;
+    }
+  
+    if (selectedItems.length === 0) {
+      Alert.alert('Error', 'Please select at least one item to split.');
+      return;
+    }
+  
+    // Calculate the total cost of the selected items
+    const totalCost = shoppingList
+      .filter(item => selectedItems.includes(item.id))
+      .reduce((total, item) => total + parseFloat(item.cost || 0), 0);
+  
+    const splitAmount = totalCost / selectedMembers.length;
+  
+    Alert.alert('Split Amount', `Each selected member owes: $${splitAmount.toFixed(2)}`);
+  
+    // Logic to store/update split info in Firestore could go here
+  };
+  
 
   // Function to filter the shopping list based on the selected category
   const filterListByCategory = (category) => {
@@ -197,6 +294,12 @@ export default function HomeScreen() {
         value={newItemCategory}
         onChangeText={setNewItemCategory}
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Add item cost..."
+        value={newItemCost}
+        onChangeText={setNewItemCost}
+      />
 
       <Button title="Add Item" onPress={addItemToList} />
 
@@ -206,7 +309,7 @@ export default function HomeScreen() {
       >
         <Text style={styles.filterButtonText}>Filter</Text>
       </TouchableOpacity>
-
+    
       <FlatList
         data={filteredShoppingList}
         keyExtractor={(item) => item.id}
@@ -215,7 +318,7 @@ export default function HomeScreen() {
             <View style={styles.listItem}>
               <View style={styles.textContainer}>
                 <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
-                  {item.itemName}
+                  {item.itemName} - ${item.cost}
                 </Text>
                 <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
                   added by {item.addedBy}
@@ -240,6 +343,124 @@ export default function HomeScreen() {
           </Swipeable>
         )}
       />
+
+<TouchableOpacity
+  style={styles.splitButton}
+  onPress={() => setSplitMembersModalVisible(true)}  // Update here to use the member modal state
+>
+  <Text style={styles.splitButtonText}>Split the Bill</Text>
+</TouchableOpacity>
+
+{/* Modal for selecting members to split */}
+<Modal
+  visible={splitMembersModalVisible}
+  animationType="slide"
+  transparent={true}
+  onRequestClose={() => setSplitMembersModalVisible(false)}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.splitModalContent}>
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>Select Members to Split the Bill</Text>
+        <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
+      </View>
+
+      <FlatList
+        data={householdMembers}
+        keyExtractor={(item) => item.uid} // Use `uid` as the key
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={{
+              padding: 10,
+              backgroundColor: selectedMembers.includes(item.uid) ? '#007BFF' : '#fff',
+              borderRadius: 4,
+              marginBottom: 5,
+            }}
+            onPress={() => {
+              setSelectedMembers(prevSelected =>
+                prevSelected.includes(item.uid)
+                  ? prevSelected.filter(member => member !== item.uid)
+                  : [...prevSelected, item.uid]
+              );
+            }}
+          >
+            <Text style={{ color: selectedMembers.includes(item.uid) ? '#fff' : '#000' }}>
+              {item.name} {/* Display the member's name */}
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
+
+
+
+      <Button
+        title="Next: Select Items"
+        onPress={() => {
+          if (selectedMembers.length === 0) {
+            Alert.alert('Error', 'Please select at least one member.');
+          } else {
+            setSplitMembersModalVisible(false);
+            setSplitItemsModalVisible(true);  // Correctly set the visibility of the items modal
+          }
+        }}
+      />
+    </View>
+  </View>
+</Modal>
+
+{/* Modal for selecting items to split */}
+<Modal
+  visible={splitItemsModalVisible}  // Use the items modal visibility state
+  animationType="slide"
+  transparent={true}
+  onRequestClose={() => setSplitItemsModalVisible(false)}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.splitModalContent}>
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>Select Items to Split</Text>
+        <Button title="Close" onPress={() => setSplitItemsModalVisible(false)} />
+      </View>
+
+      {/* Display list of items */}
+      <FlatList
+        data={shoppingList}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={{
+              padding: 10,
+              backgroundColor: selectedItems.includes(item.id) ? '#007BFF' : '#fff',
+              borderRadius: 4,
+              marginBottom: 5,
+            }}
+            onPress={() => {
+              setSelectedItems(prevSelected =>
+                prevSelected.includes(item.id)
+                  ? prevSelected.filter(i => i !== item.id)
+                  : [...prevSelected, item.id]
+              );
+            }}
+          >
+            <Text style={{ color: selectedItems.includes(item.id) ? '#fff' : '#000' }}>
+              {item.itemName} - ${item.cost}
+            </Text>
+          </TouchableOpacity>
+        )}
+      />
+      <Button
+        title="Confirm Split"
+        onPress={() => {
+          splitBill();
+          setSplitItemsModalVisible(false);  // Correctly close the items modal
+        }}
+      />
+    </View>
+  </View>
+</Modal>
+
+
+
 
       {/* Edit Modal */}
       <Modal
@@ -452,4 +673,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  splitButton: {
+    alignSelf: 'center',
+    backgroundColor: '#FF6347',
+    padding: 10,
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  splitButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  splitModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    height: '60%',
+  },
+  
 });
