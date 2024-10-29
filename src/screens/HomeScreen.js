@@ -5,6 +5,8 @@ import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, quer
 import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
+
 
 export default function HomeScreen() {
   const [shoppingList, setShoppingList] = useState([]);  // State for shopping list
@@ -66,12 +68,13 @@ export default function HomeScreen() {
   }, [selectedCategory, shoppingList]); // Re-run when either selectedCategory or shoppingList changes
 
   // Function to add a new item to Firestore
+
   const addItemToList = async () => {
     if (newItem.trim() === '' || newItemCategory.trim() === '') {
       Alert.alert('Error', 'Please enter an item and its category');
       return;
     }
-
+  
     const newItemObj = {
       itemName: newItem,
       category: newItemCategory,
@@ -79,17 +82,27 @@ export default function HomeScreen() {
       isPurchased: false,
       addedDate: new Date(),
     };
-
+  
     try {
       await addDoc(collection(db, `households/${selectedHousehold}/groceryLists`), newItemObj);
       setNewItem('');
       setNewItemCategory('');
+  
+      // Send notification
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'New Item Added',
+          body: `${newItemObj.itemName} has been added to your grocery list`,
+        },
+        trigger: null, // Send instantly
+      });
     } catch (error) {
       Alert.alert('Error', 'Failed to add item. Please try again.');
       console.error(error);
     }
   };
 
+  
   const deleteItem = async (itemId) => {
     try {
       await deleteDoc(doc(db, `households/${selectedHousehold}/groceryLists/${itemId}`));
@@ -155,22 +168,34 @@ export default function HomeScreen() {
 
   // Function to toggle the purchased status of an item
   const togglePurchased = async (itemId, currentStatus) => {
-    try {
-      // Update the purchased status in Firestore
-      const itemRef = doc(db, `households/${selectedHousehold}/groceryLists`, itemId);
-      await updateDoc(itemRef, { isPurchased: !currentStatus });
+  try {
+    const itemRef = doc(db, `households/${selectedHousehold}/groceryLists`, itemId);
+    await updateDoc(itemRef, { isPurchased: !currentStatus });
 
-      // Update the local shoppingList state
-      setShoppingList((prevList) =>
-        prevList.map((item) =>
-          item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
-        )
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update item status. Please try again.');
-      console.error(error);
+    setShoppingList((prevList) =>
+      prevList.map((item) =>
+        item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
+      )
+    );
+
+    if (!currentStatus) {
+      // Schedule a reminder if the item is not purchased
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Reminder to Buy Item',
+          body: `Don't forget to buy ${itemId} from your grocery list!`,
+        },
+        trigger: {
+          seconds: 3 * 24 * 60 * 60, // 3 days in seconds
+        },
+      });
     }
-  };
+  } catch (error) {
+    Alert.alert('Error', 'Failed to update item status. Please try again.');
+    console.error(error);
+  }
+};
+
 
   const selectHousehold = (householdId) => {
     setSelectedHousehold(householdId);

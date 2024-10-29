@@ -6,6 +6,9 @@ import { onAuthStateChanged } from "firebase/auth";
 import { NavigationContainer} from '@react-navigation/native';
 import AuthStack from './src/navigation/AuthStack'
 import AppStack from './src/navigation/AppStack'
+import * as Notifications from 'expo-notifications';
+import * as Permissions from 'expo-permissions';
+import { Platform } from 'react-native';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -19,7 +22,29 @@ export default function App() {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    // Request permissions
+    const requestPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission for notifications not granted!');
+      }
+    };
   
+    requestPermissions();
+  
+    // Handle notification received in foreground
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  }, []);
+  
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -31,7 +56,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationContainer>
-        {user ? <AppStack /> : <AuthStack />}
+        {user ? <AppStack user={user} /> : <AuthStack />}
       </NavigationContainer>
     </GestureHandlerRootView>
   );
