@@ -245,7 +245,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+      {/* <Text style={styles.title}>Profile</Text> */}
 
       {/* Display user's email in the same format as other fields */}
       <View style={styles.fieldContainer}>

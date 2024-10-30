@@ -276,7 +276,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Shopping List</Text>
+      {/* <Text style={styles.title}>Shopping List</Text> */}
 
       <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
         <Text style={styles.householdButtonText}>Select Household</Text>
@@ -653,20 +653,30 @@ const styles = StyleSheet.create({
   },
   editButton: {
     padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    marginBottom: 5,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFD700',
     justifyContent: 'center',
     alignItems: 'center',
     width: 70,
     marginRight: 2,
-    borderRadius: 4,
   },
   deleteButton: {
     padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    marginBottom: 5,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FF6347',
     justifyContent: 'center',
     alignItems: 'center',
     width: 70,
-    borderRadius: 4,
   },
   actionText: {
     color: 'white',
