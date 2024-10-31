@@ -129,7 +129,7 @@ export default function CreateHouseholdScreen({ navigation }) {
             keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
             <View style={styles.header}>
-                <Text style={styles.title}>Create a New Household</Text>
+                {/* <Text style={styles.title}>Create a New Household</Text> */}
                 <TextInput
                     style={styles.input}
                     placeholder="Enter household name"
@@ -196,7 +196,8 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ccc',
         padding: 10,
-        marginBottom: 20,
+        marginTop: 10,
+        marginBottom: 10,
         borderRadius: 5,
         width: '90%',
         alignSelf: 'center',
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     buttonContainer: {
-        marginBottom: 30,
+        marginBottom: 20,
         width: '90%',
         alignSelf: 'center',
         flexDirection: 'column',
@@ -224,13 +225,21 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     householdList: {
-        marginTop: 20,
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
+        marginBottom: 5,
+        borderRadius: 4,
     },
     householdItem: {
-        padding: 15,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 5,
-        marginBottom: 10,
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
+        backgroundColor: '#f9f9f9',
+        marginBottom: 5,
+        borderRadius: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     householdText: {
         fontSize: 18,
