@@ -96,12 +96,12 @@ export default function CreateHouseholdScreen({ navigation }) {
                     members: [userId],
                 });
 
-                await addDoc(collection(db, `households/${householdRef.id}/groceryLists`), {
-                    listName: 'Default Grocery List',
+                await addDoc(collection(db, `households/${householdRef.id}/shoppingLists`), {
+                    listName: 'Default Shopping List',
                     createdDate: new Date(),
                 });
                 
-                console.log(`Created initial grocery list for household: ${householdRef.id}`);
+                console.log(`Created initial shopping list for household: ${householdRef.id}`);
                 console.log(`Created household: ${trimmedName} with code: ${generatedCode}`);
 
                 setHouseholdCode(generatedCode);

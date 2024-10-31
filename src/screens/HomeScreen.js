@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler'; // Import Swipeable
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, arrayUnion, deleteDoc, query, where} from 'firebase/firestore'; 
+import Swipeable from 'react-native-gesture-handler'; // Incorrect
+import { collection, addDoc, onSnapshot, doc, getDoc, getDocs, updateDoc, arrayUnion, deleteDoc, query, where} from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
 import { Ionicons } from '@expo/vector-icons';
 
-
-
-
 export default function HomeScreen() {
-  const [shoppingList, setShoppingList] = useState([]);  // State for shopping list
+  const [shoppingList, setShoppingList] = useState(null);  // State for shopping list
   const [filteredShoppingList, setFilteredShoppingList] = useState([]);  // State for filtered shopping list
   const [newItem, setNewItem] = useState('');  // State for new item input
   const [newItemCategory, setNewItemCategory] = useState('');
@@ -30,10 +27,6 @@ export default function HomeScreen() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [householdMembers, setHouseholdMembers] = useState([]);
 
-
-
-
-
   // Fetch the households associated with the user
   useEffect(() => {
     const userId = auth.currentUser.uid;
@@ -50,44 +43,58 @@ export default function HomeScreen() {
     return () => unsubscribe();
   }, []);
 
+  // Fetch shopping list for the selected household
+  useEffect(() => {
+    if (!selectedHousehold) return;
+  
+    const q = collection(db, `households/${selectedHousehold}/shoppingLists`);
+    
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      getHouseholdMembersInfo(selectedHousehold);
+      const shoppingLists = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+  
+      if (shoppingLists.length > 0) {
+        const firstShoppingList = shoppingLists[0];
+        console.log(firstShoppingList);
+        setShoppingList(firstShoppingList);
+  
+        // Fetch items in the first shopping list (subcollection of items)
+        const itemsRef = collection(
+          db,
+          `households/${selectedHousehold}/shoppingLists/${firstShoppingList.id}/items`
+        );
+        const itemsSnapshot = await getDocs(itemsRef);
+        const items = itemsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+  
+        // Extract unique categories from the items
+        const uniqueCategories = [
+          ...new Set(
+            items
+              .map((item) => item.category) // Get the 'category' field
+              .filter((category) => category) // Filters out any undefined/null categories
+          ),
+        ];
+        setCategories(uniqueCategories);
+      } else {
+        setShoppingList(null); // Handle case where there are no shopping lists
+        setCategories([]); // Clear categories if there are no items
+      }
+    });
+  
+    return () => unsubscribe();
+  }, [selectedHousehold]);  
+
   useEffect(() => {
     if (selectedHousehold) {
       getHouseholdMembersInfo(selectedHousehold); // Fetch and update the members info
     }
   }, [selectedHousehold]);
-  
-
-  // Fetch grocery lists for the selected household
-  useEffect(() => {
-    if (!selectedHousehold) return;
-
-    const q = collection(db, `households/${selectedHousehold}/groceryLists`);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      getHouseholdMembersInfo(selectedHousehold);
-      const listItems = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setShoppingList(listItems);
-
-      // Extract unique categories from the list for the current household
-      const uniqueCategories = [...new Set(listItems.map(item => item.houseCodeCategory))];
-      setCategories(uniqueCategories);
-    });
-
-    return () => unsubscribe();
-  }, [selectedHousehold]);
-
-  useEffect(() => {
-    if (selectedCategory) {
-      const filteredList = shoppingList.filter(item => item.houseCodeCategory === selectedCategory);
-      setFilteredShoppingList(filteredList);
-    } else {
-      setFilteredShoppingList(shoppingList);
-    }
-  }, [selectedCategory, shoppingList]); // Re-run when either selectedCategory or shoppingList changes
-
-
 
   const getHouseholdMembersInfo = async (householdId) => {
     const householdDocRef = doc(db, 'households', householdId);
@@ -119,24 +126,44 @@ export default function HomeScreen() {
       console.log('No such household!');
     }
   };
+
+  useEffect(() => {
+    const fetchAndFilterItems = async () => {
+      if (!shoppingList) return;
   
-  const joinHousehold = async (householdId, userId) => {
-    const householdDocRef = doc(db, 'households', householdId);
-    await updateDoc(householdDocRef, {
-      members: arrayUnion(userId) // Ensure this userId is the correct Firebase UID
-    });
-  };
+      const itemsRef = collection(
+        db,
+        `households/${selectedHousehold}/shoppingLists/${shoppingList.id}/items`
+      );
   
+      try {
+        const itemsSnapshot = await getDocs(itemsRef);
+        const allItems = itemsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+  
+        // Filter items based on the selected category
+        const filteredList = selectedCategory
+          ? allItems.filter((item) => item.category === selectedCategory)
+          : allItems;
+  
+        setFilteredShoppingList(filteredList);
+      } catch (error) {
+        console.error("Error fetching and filtering items: ", error);
+      }
+    };
+  
+    fetchAndFilterItems();
+  }, [selectedCategory, shoppingList, selectedHousehold]);
   
   // Function to add a new item to Firestore
-
-  
   const addItemToList = async () => {
     if (newItem.trim() === '' || newItemCategory.trim() === '' || newItemCost.trim() === '') {
-      Alert.alert('Error', 'Please enter an item and its category');
+      Alert.alert('Error', 'Please enter an item, its category, and cost');
       return;
     }
-
+  
     const newItemObj = {
       itemName: newItem,
       category: newItemCategory,
@@ -145,9 +172,18 @@ export default function HomeScreen() {
       isPurchased: false,
       addedDate: new Date(),
     };
-
+  
     try {
-      await addDoc(collection(db, `households/${selectedHousehold}/groceryLists`), newItemObj);
+      // Reference to the items subcollection within the selected shopping list
+      const itemsRef = collection(
+        db,
+        `households/${selectedHousehold}/shoppingLists/${shoppingList.id}/items`
+      );
+  
+      // Add the new item to the items subcollection
+      await addDoc(itemsRef, newItemObj);
+  
+      // Clear the input fields
       setNewItem('');
       setNewItemCategory('');
       setNewItemCost('');
@@ -155,21 +191,29 @@ export default function HomeScreen() {
       Alert.alert('Error', 'Failed to add item. Please try again.');
       console.error(error);
     }
-  };
-
-
-
-  
+  };  
   
   const deleteItem = async (itemId) => {
     try {
-      await deleteDoc(doc(db, `households/${selectedHousehold}/groceryLists/${itemId}`));
-      setShoppingList((prevList) => prevList.filter((item) => item.id !== itemId));
+      // Reference to the specific item in the items subcollection
+      const itemRef = doc(
+        db,
+        `households/${selectedHousehold}/shoppingLists/${shoppingList.id}/items/${itemId}`
+      );
+  
+      // Delete the item document
+      await deleteDoc(itemRef);
+  
+      // Update the state to reflect the deletion
+      setShoppingList((prevList) => ({
+        ...prevList,
+        items: prevList.items.filter((item) => item.id !== itemId),
+      }));
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item. Please try again.');
       console.error(error);
     }
-  };
+  };  
 
   // Function to open edit modal
   const openEditModal = (item) => {
@@ -184,7 +228,7 @@ export default function HomeScreen() {
   const saveEdit = async () => {
     if (!currentEditItem) return;
     try {
-      const itemRef = doc(db, `households/${selectedHousehold}/groceryLists`, currentEditItem.id);
+      const itemRef = doc(db, `households/${selectedHousehold}/shoppingLists`, currentEditItem.id);
       await updateDoc(itemRef, { itemName: newItem, houseCodeCategory: newItemCategory });
 
       setShoppingList((prevList) =>
@@ -254,7 +298,7 @@ export default function HomeScreen() {
   const togglePurchased = async (itemId, currentStatus) => {
     try {
       // Update the purchased status in Firestore
-      const itemRef = doc(db, `households/${selectedHousehold}/groceryLists`, itemId);
+      const itemRef = doc(db, `households/${selectedHousehold}/shoppinLists`, itemId);
       await updateDoc(itemRef, { isPurchased: !currentStatus });
 
       // Update the local shoppingList state
