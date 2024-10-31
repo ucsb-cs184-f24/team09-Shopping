@@ -4,7 +4,7 @@ import { auth, db } from '../../firebaseConfig';
 import { getAuth, deleteUser, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { deleteDoc, doc, getDoc, setDoc, getFirestore } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, setDoc, getFirestore, collection, query, where, getDocs, updateDoc, arrayRemove } from 'firebase/firestore';
 
 export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
@@ -172,6 +172,19 @@ export default function ProfileScreen() {
     const user = auth.currentUser;
     if (confirmationText === 'DELETE') {
       try {
+        // delete user from ALL households
+        const householdsRef = collection(db, "households");
+        const householdsQuery = query(householdsRef, where("members", "array-contains", user.uid));
+        const querySnapshot = await getDocs(householdsQuery);
+        
+        const removeUserPromises = querySnapshot.docs.map((householdDoc) =>
+          updateDoc(householdDoc.ref, {
+            members: arrayRemove(user.uid)
+          })
+        );
+        await Promise.all(removeUserPromises);
+
+        // delete user from Firestore and Firebase auth
         const userDocRef = doc(db, "users", user.uid);
         await deleteDoc(userDocRef);
 
