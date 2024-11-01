@@ -116,7 +116,7 @@ export default function HouseholdDetailsScreen({ route, navigation }) {
                     />
                     <View style={styles.qrCodeContainer}>
                         <QRCode 
-                            value={household.code} // Use household ID as the value
+                            value={householdId} // Use household ID as the value
                             size={150}          // Customize size as needed
                         />
                     </View>
