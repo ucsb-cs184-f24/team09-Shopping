@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { collection, addDoc, onSnapshot, doc, getDoc, getDocs, updateDoc, arrayUnion, deleteDoc, query, where} from 'firebase/firestore'; 
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where} from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,10 +18,10 @@ export default function HomeScreen() {
   const [newItemCategory, setNewItemCategory] = useState(''); // String of new item category
   const [newItemCost, setNewItemCost] = useState(''); // String of new item cost
   const [currentEditItem, setCurrentEditItem] = useState(null); // Object of item currently editing
+
   const [selectedCategory, setSelectedCategory] = useState('');  
   const [filterModalVisible, setFilterModalVisible] = useState(false);  // State for modal visibility
   const [editModalVisible, setEditModalVisible] = useState(false);
-  
   const [householdModalVisible, setHouseholdModalVisible] = useState(false);
   const [splitModalVisible, setSplitModalVisible] = useState(false);
   const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false);
@@ -33,7 +33,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const userId = auth.currentUser.uid;
     const q = query(collection(db, 'households'), where('members', 'array-contains', userId));
-
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const userHouseholds = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -45,7 +45,7 @@ export default function HomeScreen() {
     return () => unsubscribe();
   }, []);
   
-  // Select household
+  // Select household by updating householdId
   const selectHousehold = (householdId) => {
     setSelectedHouseholdID(householdId);
     setHouseholdModalVisible(false);
@@ -99,6 +99,23 @@ export default function HomeScreen() {
   
     return () => unsubscribe();
   }, [selectedHouseholdID, shoppingListMeta]);
+
+  // Function to filter the shopping list based on the selected category
+  const filterListByCategory = (category) => {
+    setSelectedCategory(category);
+    setFilterModalVisible(false); // Close the modal after selecting
+  };
+
+  // Fetch list to display
+  useEffect(() => {
+    if (selectedCategory) {
+      const filteredList = shoppingListItems.filter(item => item.category === selectedCategory);
+      setFilteredShoppingListItems(filteredList);
+    }
+    else {
+      setFilteredShoppingListItems(shoppingListItems);
+    }
+  }, [selectedCategory, shoppingListItems]);
   
   // Fetch members if selected household changes
   useEffect(() => {
@@ -139,17 +156,6 @@ export default function HomeScreen() {
 
     fetchHouseholdMembers();
   }, [selectedHouseholdID]);
-
-  // Fetch list to display
-  useEffect(() => {
-    if (selectedCategory) {
-      const filteredList = shoppingListItems.filter(item => item.category === selectedCategory);
-      setFilteredShoppingListItems(filteredList);
-    }
-    else {
-      setFilteredShoppingListItems(shoppingListItems);
-    }
-  }, [selectedCategory, shoppingListItems]);
   
   // Add a new item to Firestore
   const addItemToList = async () => {
@@ -201,7 +207,7 @@ export default function HomeScreen() {
     }
   };  
 
-  // Edit modal
+  // Open edit modal
   const openEditModal = (item) => {
     setCurrentEditItem(item);
     setNewItemName(item.itemName);
@@ -249,12 +255,17 @@ export default function HomeScreen() {
   
     // Logic to store/update split info in Firestore could go here
   };
-  
 
-  // Function to filter the shopping list based on the selected category
-  const filterListByCategory = (category) => {
-    setSelectedCategory(category);
-    setFilterModalVisible(false); // Close the modal after selecting
+  // Function to toggle the purchased status of an item
+  const togglePurchased = async (itemId, currentStatus) => {
+    try {
+      // Update the purchased status in Firestore
+      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+      await updateDoc(itemRef, { isPurchased: !currentStatus });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update item status. Please try again.');
+      console.error(error);
+    }
   };
 
   // Render edit and delete buttons for Swipeable
@@ -274,18 +285,6 @@ export default function HomeScreen() {
       </TouchableOpacity>
     </View>
   );
-
-  // Function to toggle the purchased status of an item
-  const togglePurchased = async (itemId, currentStatus) => {
-    try {
-      // Update the purchased status in Firestore
-      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
-      await updateDoc(itemRef, { isPurchased: !currentStatus });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update item status. Please try again.');
-      console.error(error);
-    }
-  };
 
   return (
     <View style={styles.container}>
