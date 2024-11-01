@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform} from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, Image, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Modal} from 'react-native';
 import { collection, addDoc, query, onSnapshot, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig'; // Make sure to use the correct path
 import { getDoc, doc } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function CreateHouseholdScreen({ navigation }) {
     const [householdName, setHouseholdName] = useState('');
@@ -12,12 +13,32 @@ export default function CreateHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
     const [showCode, setShowCode] = useState(false);
     const [households, setHouseholds] = useState([]);
+    const [householdModalVisible, setHouseholdModalVisible] = useState(false);
+    const [displayName, setDisplayName] = useState('');
+
+    const fetchDisplayName = async () => {
+        try {
+            const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+            if (userDoc.exists()) {
+                setDisplayName(userDoc.data().name);
+                /* const fetchedDisplayName = userDoc.data().name;
+                console.log("Fetched Display Name:", fetchedDisplayName);
+                setDisplayName(fetchedDisplayName) */
+            } else {
+                console.log("User document doesn't exist");
+            }
+        } catch (error) {
+            console.error("Error fetching display name:", error);
+        }
+    };
 
     useFocusEffect(
         React.useCallback(() => {
             setErrorMessage('');
             setHouseholdName('');
-        }, [])
+            fetchDisplayName();
+            // console.log("Display Name after fetch:", displayName);
+        }, [displayName])
     );
 
     // fetch households from Firestore
@@ -88,14 +109,22 @@ export default function CreateHouseholdScreen({ navigation }) {
                     return;
                 }
 
-                await addDoc(collection(db, 'households'), {
+                // Add the household to Firestore
+                const householdRef = await addDoc(collection(db, 'households'), {
                     displayHouseholdName: trimmedName,
                     normalizedHouseholdName: normalizedName,
                     code: generatedCode,
                     members: [userId],
                 });
+                await addDoc(collection(db, `households/${householdRef.id}/groceryLists`), {
+                    listName: 'Default Grocery List',
+                    createdDate: new Date(),
+                });
+    
+                console.log(`Created initial grocery list for household: ${householdRef.id}`);
+                console.log(`Created household: ${trimmedName} with code: ${generatedCode}`);
 
-                console.log(`Creating household: ${trimmedName} with code: ${generateCode}`);
+                setHouseholdModalVisible(false);
                 setHouseholdCode(generatedCode);
                 setShowCode(false);
                 setHouseholdName(''); // reset input field after creation
@@ -114,14 +143,49 @@ export default function CreateHouseholdScreen({ navigation }) {
         </TouchableOpacity>
     );
 
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
-            <View style={styles.header}>
-                <Text style={styles.title}>Create a New Household</Text>
+            <View style={styles.screenHeader}>
+                <Text style={styles.title}>
+                    {displayName ? `Welcome, ${displayName}!` : "Welcome!"}
+                </Text>
+            </View>
+
+            <View style={styles.subtitleContainer}>
+                <Text style={styles.subtitle}>My households</Text>
+            </View>
+            <View style={styles.listContainer}>
+                {households.length > 0 ? (
+                    <FlatList 
+                        data={households}
+                        renderItem={renderHousehold}
+                        keyExtractor={item => item.id}
+                        style={styles.householdList}
+                    />
+                ) : (
+                    <Text style={styles.noHouseholdsText}>No households created yet! :(</Text>
+                )}
+            </View>
+
+            <View style={styles.actionButtonContainer}>
+                <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => setHouseholdModalVisible(true)}>
+                    <View style={styles.button}>
+                        <Ionicons name="add" size={20} color="#000" />
+                        <Text style={styles.buttonWithIcon}>Create Household</Text>
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => navigation.navigate('JoinHousehold')}>
+                    <Text style={styles.buttonText}>Join a household</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* <View style={styles.header}>
                 <TextInput
                     style={styles.input}
                     placeholder="Enter household name"
@@ -134,27 +198,45 @@ export default function CreateHouseholdScreen({ navigation }) {
                         <Button title="Create Household" onPress={createHousehold} />
                     </View>
                 </View>
-            </View>
-            <View style={styles.listContainer}>
-                <Text style={styles.subtitle}>Your Households</Text>
-                {households.length > 0 ? (
-                    <FlatList 
-                        data={households}
-                        renderItem={renderHousehold}
-                        keyExtractor={item => item.id}
-                        style={styles.householdList}
-                    />
-                ) : (
-                    <Text style={styles.noHouseholdsText}>No households created yet!</Text>
-                )}
-            </View>
+            </View> */}
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
                 style={styles.fab}
                 onPress={() => navigation.navigate('JoinHousehold')}
             >
                 <Icon name="add" size={30} color='#fff' />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+
+
+            <Modal
+                transparent={true}
+                visible={householdModalVisible}
+                animationType="slide"
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.householdModal}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Create a household</Text>
+                        </View>
+                        <TextInput
+                            style={styles.input}
+                            value={householdName}
+                            onChangeText={setHouseholdName}
+                        />
+                        {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+                        <View style={styles.actionButtonContainer}>
+                            <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => createHousehold()}>
+                                <Text style={styles.buttonText}>Create!</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.actionButtonWrapper2} onPress={() => setHouseholdModalVisible(false)}>
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+
         </KeyboardAvoidingView>
     );
 }
@@ -171,27 +253,119 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     header: {
-        marginBottom: 20,
+        marginTop: 25,
+    },
+
+    screenHeader: {
+        marginTop: 0,
+        flexDirection: 'row',
+        backgroundColor: '#D1FADF',
+        borderBottomLeftRadius: 27,
+        borderBottomRightRadius: 27,
     },
     title: {
-        fontSize: 24,
-        marginTop: 50,
+        fontSize: 28,
+        marginTop: 70,
         marginBottom: 20,
-        textAlign: 'center',
+        marginLeft: 20,
+        fontFamily: "Avenir",
+    },
+    subtitleContainer: {
+        marginTop: 24,
+        alignItems: 'flex-start',  
+    },
+    listContainer: {
+        marginTop: 6,
+        alignItems: 'flex-start',  
+        justifyContent: "center",
+        alignItems: 'center',
+        marginBottom: 12,
     },
     subtitle: {
         fontSize: 18,
         marginBottom: 3,
+        marginLeft: 20,
+        textAlign: 'left',
+        fontFamily: "Avenir",
+        fontWeight: 'bold',
+    },
+    householdList: {
+        padding: 20,
+        paddingTop: 0,
+        marginTop: 6,
+        width: '100%',
+    },
+    householdItem: {
+        padding: 14,
+        width: '100%',
+        backgroundColor: '#fff',
+        marginBottom: 8,
+        borderColor: "#000",
+        borderWidth: 1,  
+        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: "#F5F5F5"
+    },
+    householdText: {
+        fontSize: 18,
+        fontFamily: "Avenir",
+    },
+    noHouseholdsText: {
         textAlign: 'center',
+        fontSize: 16,
+        color: '#999',
+        marginTop: 20,
+        fontFamily: "Avenir",
+    },
+    actionButtonContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 10,
+    },
+    actionButtonWrapper: {
+        backgroundColor: "#E0F7FF",
+        flexDirection:'row',
+        padding: 10,
+        borderRadius: 8,
+        marginRight: 10,
+    },
+    actionButtonWrapper2: {
+        backgroundColor: "red",
+        flexDirection:'row',
+        padding: 10,
+        borderRadius: 8,
+    },
+    buttonWithIcon: {
+        color: "#000",
+        fontSize: 16,
+        marginLeft: 5,
+        fontFamily: "Avenir",
+    },
+    buttonText: {
+        color: "#000",
+        fontSize: 16,
+        fontFamily: "Avenir",
+    },
+    cancelButtonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontFamily: "Avenir",
+    },
+    button: {
+        flexDirection: 'row', // Ensure icon and text are in a row
+        alignItems: 'center', // Align items vertically centered
     },
     input: {
         borderWidth: 1,
         borderColor: '#ccc',
         padding: 10,
-        marginBottom: 20,
+        marginBottom: 10,
         borderRadius: 5,
         width: '90%',
         alignSelf: 'center',
+        fontFamily: "Avenir",
     },
     error: {
         color: 'red',
@@ -199,7 +373,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     buttonContainer: {
-        marginBottom: 30,
+        marginBottom: 20,
         width: '90%',
         alignSelf: 'center',
         flexDirection: 'column',
@@ -212,41 +386,50 @@ const styles = StyleSheet.create({
         borderRadius: 25,
         overflow: 'hidden',
     },
-    listContainer: {
+    modalContainer: {
         flex: 1,
-    },
-    householdList: {
-        marginTop: 20,
-    },
-    householdItem: {
-        padding: 15,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 5,
-        marginBottom: 10,
-    },
-    householdText: {
-        fontSize: 18,
-    },
-    noHouseholdsText: {
-        textAlign: 'center',
-        fontSize: 16,
-        color: '#999',
-        marginTop: 20.
-    },
-    fab: {
-        position: 'absolute',
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#2196F3',
         justifyContent: 'center',
-        alignItems: 'center',
-        right: 20,
-        bottom: 20,
-        elevation: 8, // shadow effect on Android
-        shadowColor: '#000', // shadow effect on IOS
-        shadowOffset: { width: 0, height: 2},
-        shadowOpacity: 0.3,
-        shadowRadius: 2,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
+    householdModal: {
+        backgroundColor: '#fff',
+        padding: 20,
+        borderRadius: 10,
+        margin: 20,
+        height: '21%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        fontFamily: "Avenir",
+    },
+    image: {
+        width: 16,
+        height: 16, 
+        marginLeft: 10, 
+        resizeMode: 'contain',
+        backgroundColor: 'lightgray',
+    },
+    // fab: {
+    //     position: 'absolute',
+    //     width: 60,
+    //     height: 60,
+    //     borderRadius: 30,
+    //     backgroundColor: '#7CD4FD',
+    //     justifyContent: 'center',
+    //     alignItems: 'center',
+    //     right: 20,
+    //     bottom: 20,
+    //     elevation: 8, // shadow effect on Android
+    //     shadowColor: '#000', // shadow effect on IOS
+    //     shadowOffset: { width: 0, height: 2},
+    //     shadowOpacity: 0.3,
+    //     shadowRadius: 2,
+    // },
 });
