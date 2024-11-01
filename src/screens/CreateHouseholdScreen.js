@@ -61,7 +61,6 @@ export default function CreateHouseholdScreen({ navigation }) {
     const createHousehold = async () => {
         const trimmedName = householdName.trim();
         const normalizedName = trimmedName.toLowerCase();
-
         if (!householdName.trim()) {
             setErrorMessage('Household name is required.');
         } else {
@@ -203,12 +202,21 @@ export default function CreateHouseholdScreen({ navigation }) {
                             value={householdName}
                             onChangeText={setHouseholdName}
                         />
-                        {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-                        <View style={styles.actionButtonContainer}>
+                        <View style={{ height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : <Text style={styles.error}></Text>}
+                        </View>
+
+                        <View style={styles.modalButtonContainer}>
                             <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => createHousehold()}>
                                 <Text style={styles.buttonText}>Create!</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionButtonWrapper2} onPress={() => setHouseholdModalVisible(false)}>
+                            <TouchableOpacity 
+                                style={styles.actionButtonWrapper2} 
+                                onPress={() => {
+                                    setHouseholdModalVisible(false);
+                                    setErrorMessage(""); // Clear error message on Cancel
+                                }}    
+                            >
                                 <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
                         </View>
@@ -304,6 +312,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: 10,
     },
+    modalButtonContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 10,
+    },
     actionButtonWrapper: {
         backgroundColor: "#E0F7FF",
         flexDirection:'row',
@@ -349,8 +363,8 @@ const styles = StyleSheet.create({
     },
     error: {
         color: 'red',
-        marginBottom: 20,
         textAlign: 'center',
+        minHeight: 10,
     },
     buttonContainer: {
         marginBottom: 20,
@@ -376,7 +390,7 @@ const styles = StyleSheet.create({
         padding: 20,
         borderRadius: 10,
         margin: 20,
-        height: '21%',
+        height: '23%',
     },
     modalHeader: {
         flexDirection: 'row',
