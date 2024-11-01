@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity, Alert, Modal } from 'react-native';
 import { collection, query, where, getDocs, updateDoc, arrayUnion, getDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
+import { BarCodeScanner } from 'expo-barcode-scanner';
 
 export default function JoinHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [hasPermission, setHasPermission] = useState(null);
+    const [scanned, setScanned] = useState(false);
+    const [scannerVisible, setScannerVisible] = useState(false);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -15,6 +19,21 @@ export default function JoinHouseholdScreen({ navigation }) {
             setHouseholdCode('');
         }, [])
     );
+
+    useEffect(() => {
+        const requestPermission = async () => {
+            const { status } = await BarCodeScanner.requestPermissionsAsync();
+            setHasPermission(status === 'granted');
+        };
+        requestPermission();
+    }, []);
+
+    const handleBarCodeScanned = ({ data }) => {
+        setScanned(true);
+        setHouseholdCode(data); // populate scanned code
+        setScannerVisible(false);
+        Alert.alert('Code Scanned', `Household Code: ${data}`);
+    };
 
     const joinHousehold = async () => {
         const userId = auth.currentUser.uid;
@@ -46,7 +65,7 @@ export default function JoinHouseholdScreen({ navigation }) {
             const householdData = householdDoc.data();
 
             if (householdData.members.includes(userId)) {
-                setErrorMessage(`Already in household ${householdData.displayHouseholdName}`)
+                setErrorMessage(`Already in household ${householdData.displayHouseholdName}`);
                 return;
             }
 
@@ -54,7 +73,7 @@ export default function JoinHouseholdScreen({ navigation }) {
                 members: arrayUnion(userId),
             });
 
-            console.log(`User ${userName} joined household ${householdDoc.displayHouseholdName}`);
+            console.log(`User ${userName} joined household ${householdData.displayHouseholdName}`);
             navigation.navigate('CreateHousehold');
         } catch (error) {
             console.log("Error joining household: ", error);
@@ -69,7 +88,7 @@ export default function JoinHouseholdScreen({ navigation }) {
                 <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Join a Household</Text>
-            <TextInput 
+            <TextInput
                 style={styles.input}
                 placeholder="Enter household code"
                 value={householdCode}
@@ -79,6 +98,28 @@ export default function JoinHouseholdScreen({ navigation }) {
             <View style={styles.buttonWrapper}>
                 <Button title="Join Household" onPress={joinHousehold} />
             </View>
+            <Button title="Scan QR Code" onPress={() => setScannerVisible(true)} />
+
+            {/* QR Scanner Modal */}
+            <Modal
+                visible={scannerVisible}
+                animationType="slide"
+                onRequestClose={() => setScannerVisible(false)}
+            >
+                <View style={styles.scannerContainer}>
+                    {hasPermission === null ? (
+                        <Text>Requesting for camera permission</Text>
+                    ) : hasPermission === false ? (
+                        <Text>No access to camera</Text>
+                    ) : (
+                        <BarCodeScanner
+                            onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+                            style={{ width: '100%', height: '100%' }}
+                        />
+                    )}
+                    <Button title="Close Scanner" onPress={() => setScannerVisible(false)} />
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -122,5 +163,10 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         borderRadius: 25,
         overflow: 'hidden',
+    },
+    scannerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

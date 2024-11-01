@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { doc, getDoc, updateDoc, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
+import QRCode from 'react-native-qrcode-svg';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 export default function HouseholdDetailsScreen({ route, navigation }) {
@@ -113,6 +114,12 @@ export default function HouseholdDetailsScreen({ route, navigation }) {
                         keyExtractor={item => item.userId}
                         style={styles.membersList}
                     />
+                    <View style={styles.qrCodeContainer}>
+                        <QRCode 
+                            value={household.code} // Use household ID as the value
+                            size={150}          // Customize size as needed
+                        />
+                    </View>
                     <TouchableOpacity style={styles.leaveButton} onPress={confirmLeaveHousehold}>
                         <Text style={styles.leaveButtonText}>Leave Group</Text>
                     </TouchableOpacity>
@@ -175,3 +182,4 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 });
+
