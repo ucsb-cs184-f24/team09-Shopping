@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Image, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Modal} from 'react-native';
 import { collection, addDoc, query, onSnapshot, where, getDocs } from 'firebase/firestore';
-import { db, auth } from '../../firebaseConfig'; // Make sure to use the correct path
+import { db, auth } from '../../firebaseConfig';
 import { getDoc, doc } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -32,6 +32,8 @@ export default function CreateHouseholdScreen({ navigation }) {
         }
     };
 
+    const [householdModalVisible, setHouseholdModalVisible] = useState(false);
+
     useFocusEffect(
         React.useCallback(() => {
             setErrorMessage('');
@@ -41,7 +43,7 @@ export default function CreateHouseholdScreen({ navigation }) {
         }, [displayName])
     );
 
-    // fetch households from Firestore
+    // Fetch households associated with user
     useEffect(() => {
         const userId = auth.currentUser.uid;
 
@@ -79,7 +81,6 @@ export default function CreateHouseholdScreen({ navigation }) {
     const createHousehold = async () => {
         const trimmedName = householdName.trim();
         const normalizedName = trimmedName.toLowerCase();
-
         if (!householdName.trim()) {
             setErrorMessage('Household name is required.');
         } else {
@@ -116,12 +117,13 @@ export default function CreateHouseholdScreen({ navigation }) {
                     code: generatedCode,
                     members: [userId],
                 });
-                await addDoc(collection(db, `households/${householdRef.id}/groceryLists`), {
-                    listName: 'Default Grocery List',
+
+                await addDoc(collection(db, `households/${householdRef.id}/shoppingLists`), {
+                    listName: 'Default Shopping List',
                     createdDate: new Date(),
                 });
-    
-                console.log(`Created initial grocery list for household: ${householdRef.id}`);
+                
+                console.log(`Created initial shopping list for household: ${householdRef.id}`);
                 console.log(`Created household: ${trimmedName} with code: ${generatedCode}`);
 
                 setHouseholdModalVisible(false);
@@ -207,7 +209,6 @@ export default function CreateHouseholdScreen({ navigation }) {
                 <Icon name="add" size={30} color='#fff' />
             </TouchableOpacity> */}
 
-
             <Modal
                 transparent={true}
                 visible={householdModalVisible}
@@ -223,20 +224,27 @@ export default function CreateHouseholdScreen({ navigation }) {
                             value={householdName}
                             onChangeText={setHouseholdName}
                         />
-                        {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-                        <View style={styles.actionButtonContainer}>
+                        <View style={{ height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : <Text style={styles.error}></Text>}
+                        </View>
+
+                        <View style={styles.modalButtonContainer}>
                             <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => createHousehold()}>
                                 <Text style={styles.buttonText}>Create!</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionButtonWrapper2} onPress={() => setHouseholdModalVisible(false)}>
+                            <TouchableOpacity 
+                                style={styles.actionButtonWrapper2} 
+                                onPress={() => {
+                                    setHouseholdModalVisible(false);
+                                    setErrorMessage(""); // Clear error message on Cancel
+                                }}    
+                            >
                                 <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
             </Modal>
-
-
         </KeyboardAvoidingView>
     );
 }
@@ -324,6 +332,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginTop: 10,
     },
+    modalButtonContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 10,
+    },
     actionButtonWrapper: {
         backgroundColor: "#E0F7FF",
         flexDirection:'row',
@@ -369,8 +383,8 @@ const styles = StyleSheet.create({
     },
     error: {
         color: 'red',
-        marginBottom: 20,
         textAlign: 'center',
+        minHeight: 10,
     },
     buttonContainer: {
         marginBottom: 20,

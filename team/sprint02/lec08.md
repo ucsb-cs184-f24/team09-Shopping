@@ -12,7 +12,7 @@
 - Other Members:
 Anika [X],
 Kavya [x],
-Kenisha [],
+Kenisha [x],
 Wenxuan [x],
 Lawrence [x]
 
