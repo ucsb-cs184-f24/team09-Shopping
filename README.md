@@ -51,4 +51,4 @@ To install and run this app, you'll need the following:
    ```
 
 4. **Test app on Expo Go**:
-   Scan the QR code displayed from the previous step, and scan it with your mobile device that has the Expo Go app installed.
+- Scan the QR code displayed from the previous step, and scan it with your mobile device that has the Expo Go app installed.
