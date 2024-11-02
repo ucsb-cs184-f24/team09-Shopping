@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform} from 'react-native';
 import { collection, addDoc, query, onSnapshot, where, getDocs } from 'firebase/firestore';
-import { db, auth } from '../../firebaseConfig'; // Make sure to use the correct path
+import { db, auth } from '../../firebaseConfig';
 import { getDoc, doc } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,7 +20,7 @@ export default function CreateHouseholdScreen({ navigation }) {
         }, [])
     );
 
-    // fetch households from Firestore
+    // Fetch households associated with user
     useEffect(() => {
         const userId = auth.currentUser.uid;
 
@@ -96,12 +96,12 @@ export default function CreateHouseholdScreen({ navigation }) {
                     members: [userId],
                 });
 
-                await addDoc(collection(db, `households/${householdRef.id}/groceryLists`), {
-                    listName: 'Default Grocery List',
+                await addDoc(collection(db, `households/${householdRef.id}/shoppingLists`), {
+                    listName: 'Default Shopping List',
                     createdDate: new Date(),
                 });
                 
-                console.log(`Created initial grocery list for household: ${householdRef.id}`);
+                console.log(`Created initial shopping list for household: ${householdRef.id}`);
                 console.log(`Created household: ${trimmedName} with code: ${generatedCode}`);
 
                 setHouseholdCode(generatedCode);
