@@ -32,8 +32,6 @@ export default function CreateHouseholdScreen({ navigation }) {
         }
     };
 
-    const [householdModalVisible, setHouseholdModalVisible] = useState(false);
-
     useFocusEffect(
         React.useCallback(() => {
             setErrorMessage('');
