@@ -36,5 +36,19 @@ To install and run this app, you'll need the following:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/your-repo-name.git
-   cd your-repo-name
+   git clone git@github.com:ucsb-cs184-f24/team09-Shopping.git
+   cd team09-Shopping
+   ```
+
+2. **Install dependencies**:
+   ```
+   npm install
+   ```
+
+3. **Run the app**:
+   ```
+   npx expo start
+   ```
+
+4. **Test app on Expo Go**:
+   Scan the QR code displayed from the previous step, and scan it with your mobile device that has the Expo Go app installed.
