@@ -13,14 +13,32 @@ export default function CreateHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
     const [showCode, setShowCode] = useState(false);
     const [households, setHouseholds] = useState([]);
-
     const [householdModalVisible, setHouseholdModalVisible] = useState(false);
+    const [displayName, setDisplayName] = useState('');
+
+    const fetchDisplayName = async () => {
+        try {
+            const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+            if (userDoc.exists()) {
+                setDisplayName(userDoc.data().name);
+                /* const fetchedDisplayName = userDoc.data().name;
+                console.log("Fetched Display Name:", fetchedDisplayName);
+                setDisplayName(fetchedDisplayName) */
+            } else {
+                console.log("User document doesn't exist");
+            }
+        } catch (error) {
+            console.error("Error fetching display name:", error);
+        }
+    };
 
     useFocusEffect(
         React.useCallback(() => {
             setErrorMessage('');
             setHouseholdName('');
-        }, [])
+            fetchDisplayName();
+            // console.log("Display Name after fetch:", displayName);
+        }, [displayName])
     );
 
     // Fetch households associated with user
@@ -133,7 +151,9 @@ export default function CreateHouseholdScreen({ navigation }) {
             keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
             <View style={styles.screenHeader}>
-                <Text style={styles.title}>Welcome, {auth.currentUser.displayName}!</Text>
+                <Text style={styles.title}>
+                    {displayName ? `Welcome, ${displayName}!` : "Welcome!"}
+                </Text>
             </View>
 
             <View style={styles.subtitleContainer}>
@@ -388,7 +408,7 @@ const styles = StyleSheet.create({
         padding: 20,
         borderRadius: 10,
         margin: 20,
-        height: '23%',
+        height: '21%',
     },
     modalHeader: {
         flexDirection: 'row',
