@@ -286,10 +286,22 @@ export default function HomeScreen() {
     </View>
   );
 
+  const selectedHousehold = households.find(
+    (household) => household.id === selectedHouseholdID
+  );
+
   return (
     <View style={styles.container}>
       {/* <Text style={styles.title}>Shopping List</Text> */}
 
+{/* Display the currently selected household */}
+<Text style={styles.selectedHouseholdText}>
+  {selectedHousehold
+    ? `Current Household: ${
+        selectedHousehold.displayHouseholdName || 'Unnamed Household'
+      }`
+    : 'No household selected'}
+</Text>
       <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
         <Text style={styles.householdButtonText}>Select Household</Text>
       </TouchableOpacity>
@@ -590,6 +602,17 @@ const styles = StyleSheet.create({
   itemName: {
     fontWeight: 'bold',
   },
+  selectedHouseholdText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginVertical: 10,
+  },
+  selectedHouseholdText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginVertical: 10,
+  },
+    
   addedByText: {
     color: 'gray',
   },
