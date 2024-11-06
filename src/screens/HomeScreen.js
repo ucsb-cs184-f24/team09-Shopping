@@ -28,6 +28,9 @@ export default function HomeScreen() {
   const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [costModalVisible, setCostModalVisible] = useState(false);
+  const [currentItemForCost, setCurrentItemForCost] = useState(null);
+  const [inputCost, setInputCost] = useState('');
 
   // Fetch the households associated with the user
   useEffect(() => {
@@ -159,15 +162,15 @@ export default function HomeScreen() {
   
   // Add a new item to Firestore
   const addItemToList = async () => {
-    if (newItem.trim() === '' || newItemCategory.trim() === '' || newItemCost.trim() === '') {
-      Alert.alert('Error', 'Please enter an item, its category, and cost');
+    if (newItem.trim() === '' || newItemCategory.trim() === '') {
+      Alert.alert('Error', 'Please enter an item and its category');
       return;
     }
   
     const newItemObj = {
       itemName: newItem,
       category: newItemCategory,
-      cost: parseFloat(newItemCost),
+      cost: newItemCost ? parseFloat(newItemCost) : null,
       addedBy: auth.currentUser.email,
       isPurchased: false,
       addedDate: new Date(),
@@ -257,14 +260,18 @@ export default function HomeScreen() {
   };
 
   // Function to toggle the purchased status of an item
-  const togglePurchased = async (itemId, currentStatus) => {
-    try {
-      // Update the purchased status in Firestore
-      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
-      await updateDoc(itemRef, { isPurchased: !currentStatus });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update item status. Please try again.');
-      console.error(error);
+  const togglePurchased = async (itemId, currentStatus, item) => {
+    if (!currentStatus) {
+      setCurrentItemForCost(item);
+      setCostModalVisible(true);
+    } else {
+      try {
+        const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+        await updateDoc(itemRef, { isPurchased: !currentStatus });
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update item status. Please try again.');
+        console.error(error);
+      }
     }
   };
 
@@ -320,7 +327,7 @@ export default function HomeScreen() {
       />
       <TextInput
         style={styles.input}
-        placeholder="Add item cost..."
+        placeholder="Add item cost (Optional)"
         value={newItemCost}
         onChangeText={setNewItemCost}
       />
@@ -350,7 +357,7 @@ export default function HomeScreen() {
               {/* Radio button to indicate that item has been purchased */}
               <TouchableOpacity 
                 style={styles.radioButton}
-                onPress={() => togglePurchased(item.id, item.isPurchased)}
+                onPress={() => togglePurchased(item.id, item.isPurchased, item)}
               >
                 <Ionicons
                   name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
@@ -551,6 +558,49 @@ export default function HomeScreen() {
               />
             ))}
           </Picker>
+        </View>
+      </View>
+    </Modal>
+
+    <Modal
+      visible={costModalVisible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setCostModalVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.editModalContent}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter item cost"
+            value={inputCost}
+            onChangeText={setInputCost}
+            keyboardType="numeric"
+          />
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Save"
+              onPress={async () => {
+                try {
+                  const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
+                  await updateDoc(itemRef, { isPurchased: true, cost: parseFloat(inputCost) });
+                  setCostModalVisible(false);
+                  setInputCost('');
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to update item cost. Please try again.');
+                  console.error(error);
+                }
+              }}
+            />
+            <Button
+              title="Cancel"
+              onPress={() => {
+                setCostModalVisible(false);
+                setInputCost('');
+              }}
+              color="red"
+            />
+          </View>
         </View>
       </View>
     </Modal>
