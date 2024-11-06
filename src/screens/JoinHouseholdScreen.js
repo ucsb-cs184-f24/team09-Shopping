@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity, Alert, Modal } from 'react-native';
 import { collection, query, where, getDocs, updateDoc, arrayUnion, getDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
+import { BarCodeScanner } from 'expo-barcode-scanner';
 
 export default function JoinHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [hasPermission, setHasPermission] = useState(null);
+    const [scannerVisible, setScannerVisible] = useState(false);
+
+    useEffect(() => {
+        const requestPermission = async () => {
+            const { status } = await BarCodeScanner.requestPermissionsAsync();
+            setHasPermission(status === 'granted');
+        };
+        requestPermission();
+    }, []);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -16,7 +28,61 @@ export default function JoinHouseholdScreen({ navigation }) {
         }, [])
     );
 
-    const joinHousehold = async () => {
+    const handleBarCodeScanned = ({ data }) => {
+        if (isProcessing) return;
+        
+        setIsProcessing(true);
+        
+        const householdId = data;
+        joinHouseHoldId(householdId);
+        setScannerVisible(false);
+    
+        // Re-enable scanning after a delay
+        setTimeout(() => setIsProcessing(false), 2000); // 2 seconds delay
+    };
+
+    const joinHouseHoldId = async (householdId) => {
+        const userId = auth.currentUser.uid;
+    
+        try {
+            const userDocRef = doc(db, 'users', userId);
+            const userDocSnap = await getDoc(userDocRef);
+    
+            if (!userDocSnap.exists()) {
+                console.error("User document not found");
+                return;
+            }
+    
+            const userName = userDocSnap.data().name;
+    
+            const householdDocRef = doc(db, 'households', householdId);
+            const householdDocSnap = await getDoc(householdDocRef);
+    
+            if (!householdDocSnap.exists()) {
+                setErrorMessage('No household found with that ID.');
+                return;
+            }
+    
+            const householdData = householdDocSnap.data();
+    
+            if (householdData.members.includes(userId)) {
+                setErrorMessage(`Already in household ${householdData.displayHouseholdName}`);
+                return;
+            }
+    
+            await updateDoc(householdDocRef, {
+                members: arrayUnion(userId),
+            });
+    
+            console.log(`User ${userName} joined household ${householdData.displayHouseholdName}`);
+            navigation.navigate('CreateHousehold');
+        } catch (error) {
+            console.log("Error joining household: ", error);
+            setErrorMessage('An error occurred while trying to join the household.');
+        }
+    };
+
+    const joinHouseholdCode = async () => {
         const userId = auth.currentUser.uid;
         if (!householdCode.trim()) {
             setErrorMessage('Household code is required.');
@@ -46,7 +112,7 @@ export default function JoinHouseholdScreen({ navigation }) {
             const householdData = householdDoc.data();
 
             if (householdData.members.includes(userId)) {
-                setErrorMessage(`Already in household ${householdData.displayHouseholdName}`)
+                setErrorMessage(`Already in household ${householdData.displayHouseholdName}`);
                 return;
             }
 
@@ -54,7 +120,7 @@ export default function JoinHouseholdScreen({ navigation }) {
                 members: arrayUnion(userId),
             });
 
-            console.log(`User ${userName} joined household ${householdDoc.displayHouseholdName}`);
+            console.log(`User ${userName} joined household ${householdData.displayHouseholdName}`);
             navigation.navigate('CreateHousehold');
         } catch (error) {
             console.log("Error joining household: ", error);
@@ -69,7 +135,7 @@ export default function JoinHouseholdScreen({ navigation }) {
                 <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
             <Text style={styles.title}>Join a Household</Text>
-            <TextInput 
+            <TextInput
                 style={styles.input}
                 placeholder="Enter household code"
                 value={householdCode}
@@ -77,8 +143,30 @@ export default function JoinHouseholdScreen({ navigation }) {
             />
             {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
             <View style={styles.buttonWrapper}>
-                <Button title="Join Household" onPress={joinHousehold} />
+                <Button title="Join Household" onPress={joinHouseholdCode} />
             </View>
+            <Button title="Scan QR Code" onPress={() => setScannerVisible(true)} />
+            <Modal
+                visible={scannerVisible}
+                animationType="slide"
+                onRequestClose={() => setScannerVisible(false)}
+            >
+                <View style={styles.scannerContainer}>
+                    {hasPermission === null ? (
+                        <Text>Requesting for camera permission</Text>
+                    ) : hasPermission === false ? (
+                        <Text>No access to camera</Text>
+                    ) : (
+                        <BarCodeScanner
+                            onBarCodeScanned={handleBarCodeScanned}
+                            style={StyleSheet.absoluteFillObject}
+                        />
+                    )}
+                    <View style={styles.bottomContainer}>
+                        <Button title="Close Scanner" onPress={() => setScannerVisible(false)} />
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -122,5 +210,16 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         borderRadius: 25,
         overflow: 'hidden',
+    },
+    scannerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingBottom: 20,
+    },
+    bottomContainer: {
+        position: 'absolute',
+        bottom: 20,
+        width: '80%',
     },
 });
