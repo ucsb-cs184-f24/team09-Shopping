@@ -570,6 +570,10 @@ export default function HomeScreen() {
     >
       <View style={styles.modalContainer}>
         <View style={styles.editModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Enter Item Cost</Text>
+            <Button title="Close" onPress={() => setCostModalVisible(false)} />
+          </View>
           <TextInput
             style={styles.input}
             placeholder="Enter item cost"
@@ -577,9 +581,9 @@ export default function HomeScreen() {
             onChangeText={setInputCost}
             keyboardType="numeric"
           />
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Save"
+          <View style={styles.modalButtonContainer}>
+            <TouchableOpacity
+              style={styles.actionButtonWrapper}
               onPress={async () => {
                 try {
                   const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
@@ -591,15 +595,18 @@ export default function HomeScreen() {
                   console.error(error);
                 }
               }}
-            />
-            <Button
-              title="Cancel"
+            >
+              <Text style={styles.buttonText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButtonWrapper2}
               onPress={() => {
                 setCostModalVisible(false);
                 setInputCost('');
               }}
-              color="red"
-            />
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -770,6 +777,35 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     margin: 20,
     height: '60%',
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  actionButtonWrapper: {
+    backgroundColor: '#007BFF',
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    alignItems: 'center',
+    marginRight: 5,
+  },
+  actionButtonWrapper2: {
+    backgroundColor: '#FF6347',
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    alignItems: 'center',
+    marginLeft: 5,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   
 });
