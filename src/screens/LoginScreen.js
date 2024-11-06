@@ -11,10 +11,18 @@ export default function LoginScreen({ navigation }) {
 
     const handleLogin = () => {
         signInWithEmailAndPassword(auth, email, password)
-        .then(userCredentials => {
-            console.log('Logged in with:', userCredentials.user.email);
-        })
-        .catch(error => alert(error.message))
+            .then(userCredentials => {
+                console.log('Logged in with:', userCredentials.user.email);
+            })
+            .catch(error => {
+                if (error.code === 'auth/invalid-email') {
+                    alert("Please enter both email and password.");
+                } else if (error.code === 'auth/invalid-credential') {
+                    alert("Your password is incorrect or this account doesn't exist. Please try again.");
+                } else {
+                    alert(error.message);
+                }
+            });
     };
 
     const handleNavigateToRegister = () => {

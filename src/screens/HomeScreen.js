@@ -1,44 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler'; // Import Swipeable
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, arrayUnion, deleteDoc, query, where} from 'firebase/firestore'; 
-import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
-import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
+import { Swipeable } from 'react-native-gesture-handler';
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where} from 'firebase/firestore'; 
+import { db, auth } from '../../firebaseConfig';
+import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 
-
-
-
 export default function HomeScreen() {
-  const [shoppingList, setShoppingList] = useState([]);  // State for shopping list
-  const [filteredShoppingList, setFilteredShoppingList] = useState([]);  // State for filtered shopping list
-  const [newItem, setNewItem] = useState('');  // State for new item input
-  const [newItemCategory, setNewItemCategory] = useState('');
-  const [newItemCost, setNewItemCost] = useState('');
+  const [households, setHouseholds] = useState([]); // Array of household objects that user is part of
+  const [selectedHouseholdID, setSelectedHouseholdID] = useState('');  // String of ID of selected household
+  const [shoppingListMeta, setShoppingListMeta] = useState(null); // Object of default shopping metadeta, and ID
+  const [shoppingListItems, setShoppingListItems] = useState([]);  // Array of objects of items in shopping list
+  const [categories, setCategories] = useState([]);  // Array of strings of categories
+  const [householdMembers, setHouseholdMembers] = useState([]); // Array of objects of users within a household
+  const [filteredShoppingListItems, setFilteredShoppingListItems] = useState([]);  // Array of objects of filtered items in shopping list
+  const [newItem, setNewItemName] = useState('');  // String of new item name
+  const [newItemCategory, setNewItemCategory] = useState(''); // String of new item category
+  const [newItemCost, setNewItemCost] = useState(''); // String of new item cost
+  const [currentEditItem, setCurrentEditItem] = useState(null); // Object of item currently editing
+
+  const [selectedCategory, setSelectedCategory] = useState('');  
   const [filterModalVisible, setFilterModalVisible] = useState(false);  // State for modal visibility
-  const [selectedCategory, setSelectedCategory] = useState('');  // State for selected filter category
-  const [categories, setCategories] = useState([]);  // State to hold dynamic categories
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [currentEditItem, setCurrentEditItem] = useState(null); // State to hold the item being edited
-  const [selectedHousehold, setSelectedHousehold] = useState('');  // Selected household ID
-  const [households, setHouseholds] = useState([]);  // All households for the user
   const [householdModalVisible, setHouseholdModalVisible] = useState(false);
   const [splitModalVisible, setSplitModalVisible] = useState(false);
   const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false);
   const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
-  const [householdMembers, setHouseholdMembers] = useState([]);
-
-
-
-
 
   // Fetch the households associated with the user
   useEffect(() => {
     const userId = auth.currentUser.uid;
     const q = query(collection(db, 'households'), where('members', 'array-contains', userId));
-
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const userHouseholds = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -49,94 +44,126 @@ export default function HomeScreen() {
 
     return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (selectedHousehold) {
-      getHouseholdMembersInfo(selectedHousehold); // Fetch and update the members info
-    }
-  }, [selectedHousehold]);
   
-
-  // Fetch grocery lists for the selected household
-  useEffect(() => {
-    if (!selectedHousehold) return;
-
-    const q = collection(db, `households/${selectedHousehold}/groceryLists`);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      getHouseholdMembersInfo(selectedHousehold);
-      const listItems = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setShoppingList(listItems);
-
-      // Extract unique categories from the list for the current household
-      const uniqueCategories = [...new Set(listItems.map(item => item.houseCodeCategory))];
-      setCategories(uniqueCategories);
-    });
-
-    return () => unsubscribe();
-  }, [selectedHousehold]);
-
-  useEffect(() => {
-    if (selectedCategory) {
-      const filteredList = shoppingList.filter(item => item.houseCodeCategory === selectedCategory);
-      setFilteredShoppingList(filteredList);
-    } else {
-      setFilteredShoppingList(shoppingList);
-    }
-  }, [selectedCategory, shoppingList]); // Re-run when either selectedCategory or shoppingList changes
-
-
-
-  const getHouseholdMembersInfo = async (householdId) => {
-    const householdDocRef = doc(db, 'households', householdId);
-    const householdDoc = await getDoc(householdDocRef);
-  
-    if (householdDoc.exists()) {
-      const members = householdDoc.data().members;
-  
-      // Fetch user data for each member
-      const membersInfo = await Promise.all(
-        members.map(async (uid) => {
-          try {
-            const userDocRef = doc(db, 'users', uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-              return { uid, name: userDoc.data().name };
-            } else {
-              console.warn(`No user found with UID: ${uid}`);
-            }
-          } catch (error) {
-            console.error(`Failed to fetch user with UID: ${uid}`, error);
-          }
-          return null;
-        })
-      );
-  
-      setHouseholdMembers(membersInfo.filter(info => info !== null));
-    } else {
-      console.log('No such household!');
-    }
+  // Select household by updating householdId
+  const selectHousehold = (householdId) => {
+    setSelectedHouseholdID(householdId);
+    setHouseholdModalVisible(false);
   };
-  
-  const joinHousehold = async (householdId, userId) => {
-    const householdDocRef = doc(db, 'households', householdId);
-    await updateDoc(householdDocRef, {
-      members: arrayUnion(userId) // Ensure this userId is the correct Firebase UID
-    });
-  };
-  
-  
-  // Function to add a new item to Firestore
 
-  
-  const addItemToList = async () => {
-    if (newItem.trim() === '' || newItemCategory.trim() === '' || newItemCost.trim() === '') {
-      Alert.alert('Error', 'Please enter an item and its category');
+  // Listen for changes in shopping list meta data
+  useEffect(() => {
+    if (!selectedHouseholdID) {
+      setShoppingListMeta(null);
       return;
     }
 
+    const q = collection(db, `households/${selectedHouseholdID}/shoppingLists`);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const shoppingLists = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Get first shopping list metadata (shoppingLists[0])
+      const defaultShoppingListMeta = shoppingLists[0];
+      setShoppingListMeta(defaultShoppingListMeta);
+    });
+
+    return () => unsubscribe();
+  }, [selectedHouseholdID]);
+
+  // Listen for changes in items of shopping list
+  useEffect(() => {
+    if (!selectedHouseholdID || !shoppingListMeta) {
+      setShoppingListItems([]);
+      setCategories([]);
+      return;
+    }
+  
+    const itemsRef = collection(
+      db,
+      `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
+    );
+    const unsubscribe = onSnapshot(itemsRef, (itemsSnapshot) => {
+      const items = itemsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setShoppingListItems(items);
+  
+      // Extract unique categories from items
+      const uniqueCategories = Array.from(new Set(items.map((item) => item.category)));
+      setCategories(uniqueCategories);
+    });
+  
+    return () => unsubscribe();
+  }, [selectedHouseholdID, shoppingListMeta]);
+
+  // Function to filter the shopping list based on the selected category
+  const filterListByCategory = (category) => {
+    setSelectedCategory(category);
+    setFilterModalVisible(false); // Close the modal after selecting
+  };
+
+  // Fetch list to display
+  useEffect(() => {
+    if (selectedCategory) {
+      const filteredList = shoppingListItems.filter(item => item.category === selectedCategory);
+      setFilteredShoppingListItems(filteredList);
+    }
+    else {
+      setFilteredShoppingListItems(shoppingListItems);
+    }
+  }, [selectedCategory, shoppingListItems]);
+  
+  // Fetch members if selected household changes
+  useEffect(() => {
+    const fetchHouseholdMembers = async () => {
+      if (!selectedHouseholdID) {
+        setHouseholdMembers([]);
+        return;
+      }
+
+      try {
+        const householdDocRef = doc(db, 'households', selectedHouseholdID);
+        const householdDoc = await getDoc(householdDocRef);
+
+        const members = householdDoc.data().members;
+        const membersInfo = await Promise.all(
+          members.map(async (uid) => {
+            try {
+              const userDocRef = doc(db, 'users', uid);
+              const userDoc = await getDoc(userDocRef);
+              if (userDoc.exists()) {
+                return { uid, name: userDoc.data().name };
+              }
+              else {
+                console.warn(`No user found with UID: ${uid}`);
+              }
+            } catch (error) {
+              console.error(`Failed to fetch user with UID: ${uid}`, error);
+            }
+            return null;
+          })
+        );
+
+        setHouseholdMembers(membersInfo.filter(info => info !== null));
+      } catch (error) {
+        console.error("Error fetching household:", error);
+      }
+    };
+
+    fetchHouseholdMembers();
+  }, [selectedHouseholdID]);
+  
+  // Add a new item to Firestore
+  const addItemToList = async () => {
+    if (newItem.trim() === '' || newItemCategory.trim() === '' || newItemCost.trim() === '') {
+      Alert.alert('Error', 'Please enter an item, its category, and cost');
+      return;
+    }
+  
     const newItemObj = {
       itemName: newItem,
       category: newItemCategory,
@@ -145,55 +172,59 @@ export default function HomeScreen() {
       isPurchased: false,
       addedDate: new Date(),
     };
-
+  
     try {
-      await addDoc(collection(db, `households/${selectedHousehold}/groceryLists`), newItemObj);
-      setNewItem('');
+      const itemsRef = collection(
+        db,
+        `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
+      );
+      // Add item to shopping list
+      await addDoc(itemsRef, newItemObj);
+  
+      setNewItemName('');
       setNewItemCategory('');
       setNewItemCost('');
     } catch (error) {
       Alert.alert('Error', 'Failed to add item. Please try again.');
       console.error(error);
     }
-  };
-
-
-
+  };  
   
-  
+  // Delete an item
   const deleteItem = async (itemId) => {
     try {
-      await deleteDoc(doc(db, `households/${selectedHousehold}/groceryLists/${itemId}`));
-      setShoppingList((prevList) => prevList.filter((item) => item.id !== itemId));
+      // Reference to the specific item in the items subcollection
+      const itemRef = doc(
+        db,
+        `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items/${itemId}`
+      );
+      // Delete the item document
+      await deleteDoc(itemRef);
+      
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item. Please try again.');
       console.error(error);
     }
-  };
+  };  
 
-  // Function to open edit modal
+  // Open edit modal
   const openEditModal = (item) => {
     setCurrentEditItem(item);
-    setNewItem(item.itemName);
-    setNewItemCategory(item.houseCodeCategory);
+    setNewItemName(item.itemName);
+    setNewItemCategory(item.category);
     setNewItemCost(item.cost);
     setEditModalVisible(true);
   };
 
-  // Function to save edited item
+  // Save edited item
   const saveEdit = async () => {
     if (!currentEditItem) return;
     try {
-      const itemRef = doc(db, `households/${selectedHousehold}/groceryLists`, currentEditItem.id);
-      await updateDoc(itemRef, { itemName: newItem, houseCodeCategory: newItemCategory });
+      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentEditItem.id);
+      await updateDoc(itemRef, { itemName: newItem, category: newItemCategory });
 
-      setShoppingList((prevList) =>
-        prevList.map((item) =>
-          item.id === currentEditItem.id ? { ...item, itemName: newItem, houseCodeCategory: newItemCategory } : item
-        )
-      );
       setEditModalVisible(false);
-      setNewItem('');
+      setNewItemName('');
       setNewItemCategory('');
       setNewItemCost('');
     } catch (error) {
@@ -214,7 +245,7 @@ export default function HomeScreen() {
     }
   
     // Calculate the total cost of the selected items
-    const totalCost = shoppingList
+    const totalCost = shoppingListItems
       .filter(item => selectedItems.includes(item.id))
       .reduce((total, item) => total + parseFloat(item.cost || 0), 0);
   
@@ -224,12 +255,17 @@ export default function HomeScreen() {
   
     // Logic to store/update split info in Firestore could go here
   };
-  
 
-  // Function to filter the shopping list based on the selected category
-  const filterListByCategory = (category) => {
-    setSelectedCategory(category);
-    setFilterModalVisible(false); // Close the modal after selecting
+  // Function to toggle the purchased status of an item
+  const togglePurchased = async (itemId, currentStatus) => {
+    try {
+      // Update the purchased status in Firestore
+      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+      await updateDoc(itemRef, { isPurchased: !currentStatus });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update item status. Please try again.');
+      console.error(error);
+    }
   };
 
   // Render edit and delete buttons for Swipeable
@@ -250,34 +286,22 @@ export default function HomeScreen() {
     </View>
   );
 
-  // Function to toggle the purchased status of an item
-  const togglePurchased = async (itemId, currentStatus) => {
-    try {
-      // Update the purchased status in Firestore
-      const itemRef = doc(db, `households/${selectedHousehold}/groceryLists`, itemId);
-      await updateDoc(itemRef, { isPurchased: !currentStatus });
-
-      // Update the local shoppingList state
-      setShoppingList((prevList) =>
-        prevList.map((item) =>
-          item.id === itemId ? { ...item, isPurchased: !currentStatus } : item
-        )
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update item status. Please try again.');
-      console.error(error);
-    }
-  };
-
-  const selectHousehold = (householdId) => {
-    setSelectedHousehold(householdId);
-    setHouseholdModalVisible(false);
-  };
+  const selectedHousehold = households.find(
+    (household) => household.id === selectedHouseholdID
+  );
 
   return (
     <View style={styles.container}>
       {/* <Text style={styles.title}>Shopping List</Text> */}
 
+{/* Display the currently selected household */}
+<Text style={styles.selectedHouseholdText}>
+  {selectedHousehold
+    ? `Current Household: ${
+        selectedHousehold.displayHouseholdName || 'Unnamed Household'
+      }`
+    : 'No household selected'}
+</Text>
       <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
         <Text style={styles.householdButtonText}>Select Household</Text>
       </TouchableOpacity>
@@ -286,7 +310,7 @@ export default function HomeScreen() {
         style={styles.input}
         placeholder="Add a new item..."
         value={newItem}
-        onChangeText={setNewItem}
+        onChangeText={setNewItemName}
       />
       <TextInput
         style={styles.input}
@@ -300,18 +324,14 @@ export default function HomeScreen() {
         value={newItemCost}
         onChangeText={setNewItemCost}
       />
-
       <Button title="Add Item" onPress={addItemToList} />
 
-      <TouchableOpacity
-        style={styles.filterButton}
-        onPress={() => setFilterModalVisible(true)}
-      >
+      <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
         <Text style={styles.filterButtonText}>Filter</Text>
       </TouchableOpacity>
     
       <FlatList
-        data={filteredShoppingList}
+        data={filteredShoppingListItems}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <Swipeable renderRightActions={() => renderRightActions(item)}>
@@ -324,10 +344,9 @@ export default function HomeScreen() {
                   added by {item.addedBy}
                 </Text>
                 <Text style={[item.isPurchased && styles.purchasedText]}>
-                  Category: {item.houseCodeCategory}
+                  Category: {item.category}
                 </Text>
               </View>
-              
               {/* Radio button to indicate that item has been purchased */}
               <TouchableOpacity 
                 style={styles.radioButton}
@@ -344,69 +363,65 @@ export default function HomeScreen() {
         )}
       />
 
-<TouchableOpacity
-  style={styles.splitButton}
-  onPress={() => setSplitMembersModalVisible(true)}  // Update here to use the member modal state
->
-  <Text style={styles.splitButtonText}>Split the Bill</Text>
-</TouchableOpacity>
+      <TouchableOpacity
+        style={styles.splitButton}
+        onPress={() => setSplitMembersModalVisible(true)}  // Update here to use the member modal state
+      >
+        <Text style={styles.splitButtonText}>Split the Bill</Text>
+      </TouchableOpacity>
 
-{/* Modal for selecting members to split */}
-<Modal
-  visible={splitMembersModalVisible}
-  animationType="slide"
-  transparent={true}
-  onRequestClose={() => setSplitMembersModalVisible(false)}
->
-  <View style={styles.modalContainer}>
-    <View style={styles.splitModalContent}>
-      <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle}>Select Members to Split the Bill</Text>
-        <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
-      </View>
-
-      <FlatList
-        data={householdMembers}
-        keyExtractor={(item) => item.uid} // Use `uid` as the key
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={{
-              padding: 10,
-              backgroundColor: selectedMembers.includes(item.uid) ? '#007BFF' : '#fff',
-              borderRadius: 4,
-              marginBottom: 5,
-            }}
-            onPress={() => {
-              setSelectedMembers(prevSelected =>
-                prevSelected.includes(item.uid)
-                  ? prevSelected.filter(member => member !== item.uid)
-                  : [...prevSelected, item.uid]
-              );
-            }}
-          >
-            <Text style={{ color: selectedMembers.includes(item.uid) ? '#fff' : '#000' }}>
-              {item.name} {/* Display the member's name */}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
-
-
-
-      <Button
-        title="Next: Select Items"
-        onPress={() => {
-          if (selectedMembers.length === 0) {
-            Alert.alert('Error', 'Please select at least one member.');
-          } else {
-            setSplitMembersModalVisible(false);
-            setSplitItemsModalVisible(true);  // Correctly set the visibility of the items modal
-          }
-        }}
-      />
-    </View>
-  </View>
-</Modal>
+      {/* Modal for selecting members to split */}
+      <Modal
+        visible={splitMembersModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSplitMembersModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.splitModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Members to Split the Bill</Text>
+              <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
+            </View>
+            <FlatList
+              data={householdMembers}
+              keyExtractor={(item) => item.uid} // Use `uid` as the key
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={{
+                    padding: 10,
+                    backgroundColor: selectedMembers.includes(item.uid) ? '#007BFF' : '#fff',
+                    borderRadius: 4,
+                    marginBottom: 5,
+                  }}
+                  onPress={() => {
+                    setSelectedMembers(prevSelected =>
+                      prevSelected.includes(item.uid)
+                        ? prevSelected.filter(member => member !== item.uid)
+                        : [...prevSelected, item.uid]
+                    );
+                  }}
+                >
+                  <Text style={{ color: selectedMembers.includes(item.uid) ? '#fff' : '#000' }}>
+                    {item.name} {/* Display the member's name */}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+            <Button
+              title="Next: Select Items"
+              onPress={() => {
+                if (selectedMembers.length === 0) {
+                  Alert.alert('Error', 'Please select at least one member.');
+                } else {
+                  setSplitMembersModalVisible(false);
+                  setSplitItemsModalVisible(true);  // Correctly set the visibility of the items modal
+                }
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
 
 {/* Modal for selecting items to split */}
 <Modal
@@ -424,7 +439,7 @@ export default function HomeScreen() {
 
       {/* Display list of items */}
       <FlatList
-        data={shoppingList}
+        data={shoppingListItems}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -459,93 +474,87 @@ export default function HomeScreen() {
   </View>
 </Modal>
 
-
-
-
-      {/* Edit Modal */}
-      <Modal
-        visible={editModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.editModalContent}>
-            <TextInput
-              style={styles.input}
-              placeholder="Edit item name"
-              value={newItem}
-              onChangeText={setNewItem}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Edit category"
-              value={newItemCategory}
-              onChangeText={setNewItemCategory}
-            />
-            <View style={styles.buttonContainer}>
-              <Button title="Save" onPress={saveEdit} />
-              <Button title="Cancel" onPress={() => setEditModalVisible(false)} color="red" />
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal for filter selection */}
-      <Modal
-        visible={filterModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setFilterModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.filterModalContent}>
-            {/* Header Row with 'Select a Category' and 'Close' Button */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select a Category</Text>
-              <Button title="Close" onPress={() => setFilterModalVisible(false)} />
-            </View>
-
-            <Picker
-              selectedValue={selectedCategory}
-              onValueChange={(itemValue) => filterListByCategory(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="No Filter" value="" />
-              {categories.map((category, index) => (
-                <Picker.Item key={index} label={category} value={category} />
-              ))}
-            </Picker>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal for household selection */}
-      <Modal visible={householdModalVisible} animationType="slide" transparent={true} onRequestClose={() => setHouseholdModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.filterModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select a Household</Text>
-              <Button title="Close" onPress={() => setHouseholdModalVisible(false)} />
-            </View>
-            <Picker
-              selectedValue={selectedHousehold}
-              onValueChange={(itemValue) => selectHousehold(itemValue)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select Household" value="" />
-              {households.map((household) => (
-                <Picker.Item
-                  key={household.id}
-                  label={household.displayHouseholdName || "Unnamed Household"}
-                  value={household.id}
-                />
-              ))}
-            </Picker>
-          </View>
-        </View>
-      </Modal>
+<Modal
+  visible={editModalVisible}
+  animationType="slide"
+  transparent={true}
+  onRequestClose={() => setEditModalVisible(false)}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.editModalContent}>
+      <TextInput
+        style={styles.input}
+        placeholder="Edit item name"
+        value={newItem}
+        onChangeText={setNewItemName}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Edit category"
+        value={newItemCategory}
+        onChangeText={setNewItemCategory}
+      />
+      <View style={styles.buttonContainer}>
+        <Button title="Save" onPress={saveEdit} />
+        <Button title="Cancel" onPress={() => setEditModalVisible(false)} color="red" />
+      </View>
     </View>
+  </View>
+</Modal>
+
+  {/* Modal for filter selection */}
+  <Modal
+    visible={filterModalVisible}
+    animationType="slide"
+    transparent={true}
+    onRequestClose={() => setFilterModalVisible(false)}
+  >
+    <View style={styles.modalContainer}>
+      <View style={styles.filterModalContent}>
+        {/* Header Row with 'Select a Category' and 'Close' Button */}
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Select a Category</Text>
+          <Button title="Close" onPress={() => setFilterModalVisible(false)} />
+        </View>
+        <Picker
+          selectedValue={selectedCategory}
+          onValueChange={(itemValue) => filterListByCategory(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="No Filter" value="" />
+          {categories.map((category, index) => (
+            <Picker.Item key={index} label={category} value={category} />
+          ))}
+        </Picker>
+      </View>
+    </View>
+  </Modal>
+
+    <Modal visible={householdModalVisible} animationType="slide" transparent={true} onRequestClose={() => setHouseholdModalVisible(false)}>
+      <View style={styles.modalContainer}>
+        <View style={styles.filterModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select a Household</Text>
+            <Button title="Close" onPress={() => setHouseholdModalVisible(false)} />
+          </View>
+          <Picker
+            selectedValue={selectedHouseholdID}
+            onValueChange={(itemValue) => selectHousehold(itemValue)}
+            style={styles.picker}
+          >
+            <Picker.Item label="Select Household" value="" />
+            {households.map((household) => (
+              <Picker.Item
+                key={household.id}
+                label={household.displayHouseholdName || "Unnamed Household"}
+                value={household.id}
+              />
+            ))}
+          </Picker>
+        </View>
+      </View>
+    </Modal>
+  </View>
   );
 }
 
@@ -593,6 +602,17 @@ const styles = StyleSheet.create({
   itemName: {
     fontWeight: 'bold',
   },
+  selectedHouseholdText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginVertical: 10,
+  },
+  selectedHouseholdText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginVertical: 10,
+  },
+    
   addedByText: {
     color: 'gray',
   },

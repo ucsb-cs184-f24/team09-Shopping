@@ -25,7 +25,7 @@ export default function App() {
 
                 return <Ionicons name={iconName} size={size} color={color} />;
                 },
-                tabBarActiveTintColor: 'tomato',
+                tabBarActiveTintColor: '#003366',
                 tabBarInactiveTintColor: 'gray',
 
                 // Customize the header title style and remove border for iOS
@@ -40,8 +40,12 @@ export default function App() {
                 },
             })}
         >
-            <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Shopping List' }} />
-            <Tab.Screen name="Create Household" component={HouseholdStack} options={{ title: 'Create Households' }} />
+            <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Shopping Lists' }} />
+            <Tab.Screen name="Create Household" component={HouseholdStack} 
+                options={{ 
+                    headerShown: false,
+                    tabBarLabel: 'Home' // Set the tab title here
+                }}   />
             <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} /> 
         </Tab.Navigator>
     );
