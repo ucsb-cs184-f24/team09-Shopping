@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
@@ -19,6 +19,10 @@ export default function RegisterScreen({ navigation }) {
     const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
 
     const handleSignUp = async () => {
+        if (!name.trim() || !email.trim() || !phone.trim() || !address.trim() || !password.trim() || !confirmPassword.trim()) {
+            alert('Please fill in all fields!');
+            return;
+        }
         if (password != confirmPassword) {
             alert('Passwords do not match!');
             return;
@@ -44,7 +48,7 @@ export default function RegisterScreen({ navigation }) {
             if (error.code === 'auth/email-already-in-use') {
                 alert('This email is already associated with an account.');
             } else {
-                alert(error.message);
+                alert(error);
             }
         }
     };
@@ -69,6 +73,15 @@ export default function RegisterScreen({ navigation }) {
                 contentContainerStyle={styles.scrollContainer}
                 keyboardShouldPersistTaps="handled"
             >
+                {/* Logo and Header */}
+                <View style={styles.headerContainer}>
+                    <Image 
+                        source={require('../../assets/cart.png')}
+                        style={styles.logo}
+                    />
+                    <Text style={styles.welcomeText}>Create Your Account</Text>
+                    <Text style={styles.subText}>Fill in your details below to register!</Text>
+                </View>
 
                 <View style={styles.backButtonContainer}>
                     <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -150,6 +163,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
         paddingTop: 80,
+    },
+    headerContainer: {
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    logo: {
+        width: 100,
+        height: 100,
+        marginBottom: 10,
+    },
+    welcomeText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    subText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        marginTop: 5,
+        marginBottom: 15,
     },
     inputContainer: {
         width: '80%'

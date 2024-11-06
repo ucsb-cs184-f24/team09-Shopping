@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAvoidingView, StyleSheet, Text, TextInput, TouchableOpacity, View, Image } from 'react-native'
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,16 @@ export default function LoginScreen({ navigation }) {
             style={styles.container}
             behavior="padding"
         >
+            {/* Logo Section */}
+            <View style={styles.logoContainer}>
+                <Image 
+                    source={require('../../assets/cart.png')}
+                    style={styles.logo}
+                />
+                <Text style={styles.welcomeText}>Welcome to CartShare!</Text>
+                <Text style={styles.subText}>Please log in to continue</Text>
+            </View>
+
             <View style={styles.inputContainer}>
                 <TextInput
                     placeholder="Email"
@@ -76,8 +86,29 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#f0f4f8',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+    },
+    logoContainer: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    logo: {
+        width: 100,
+        height: 100,
+        marginBottom: 10,
+    },
+    welcomeText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    subText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        marginTop: 5,
     },
     inputContainer: {
         width: '80%'
