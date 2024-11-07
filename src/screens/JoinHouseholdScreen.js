@@ -6,6 +6,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 
+// TODO (COMPLETE): change formatting of button for better UI
+
 export default function JoinHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
@@ -145,7 +147,9 @@ export default function JoinHouseholdScreen({ navigation }) {
             <View style={styles.buttonWrapper}>
                 <Button title="Join Household" onPress={joinHouseholdCode} />
             </View>
-            <Button title="Scan QR Code" onPress={() => setScannerVisible(true)} />
+            <TouchableOpacity style={styles.qrButton} onPress={() => setScannerVisible(true)}>
+                <Text style={styles.qrButtonText}>Scan QR Code</Text>
+            </TouchableOpacity>
             <Modal
                 visible={scannerVisible}
                 animationType="slide"
@@ -163,7 +167,9 @@ export default function JoinHouseholdScreen({ navigation }) {
                         />
                     )}
                     <View style={styles.bottomContainer}>
-                        <Button title="Close Scanner" onPress={() => setScannerVisible(false)} />
+                        <TouchableOpacity style={styles.closeButton} onPress={() => setScannerVisible(false)}>
+                            <Text style={styles.closeButtonText}>Close Scanner</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
@@ -221,5 +227,42 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 20,
         width: '80%',
+    },
+    qrButton: {
+    marginTop: 10, // Adds spacing from the "Join Household" button
+    backgroundColor: '#28a745', // Green background for differentiation
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    shadowColor: '#000', // Optional shadow for elevation effect
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5, // Android shadow effect
+    },
+    qrButtonText: {
+    color: '#fff', // White text for contrast
+    fontWeight: 'bold',
+    fontSize: 16,
+    },
+    closeButton: {
+    backgroundColor: '#FF6347', // Tomato color for a noticeable button
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+    shadowColor: '#000', // Optional shadow for elevation
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5, // Android shadow effect
+    },
+    closeButtonText: {
+        color: '#fff', // White text for contrast
+        fontWeight: 'bold',
+        fontSize: 16,
     },
 });
