@@ -11,10 +11,10 @@ Owen Park [x]
 
 - Other Members:
 Anika [X],
-Kavya [],
+Kavya [ ],
 Kenisha [x],
 Wenxuan [x],
-Lawrence []
+Lawrence [ ]
 
 ## Completed Agenda:
 1. Discussed when we want to do our HW04 planning meeting, Retro, and MVP Feedback meeting.
