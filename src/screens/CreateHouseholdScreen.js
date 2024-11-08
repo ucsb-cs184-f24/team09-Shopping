@@ -7,6 +7,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
+// TODO (COMPLETE): When user inputs name for household, textbox stays within white container (cleaner UI)
+
 export default function CreateHouseholdScreen({ navigation }) {
     const [householdName, setHouseholdName] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
@@ -222,7 +224,7 @@ export default function CreateHouseholdScreen({ navigation }) {
                             value={householdName}
                             onChangeText={setHouseholdName}
                         />
-                        <View style={{ height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ height: 40, justifyContent: 'center', alignItems: 'center' }}>
                             {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : <Text style={styles.error}></Text>}
                         </View>
 
@@ -375,6 +377,7 @@ const styles = StyleSheet.create({
         padding: 10,
         marginBottom: 10,
         borderRadius: 5,
+        marginVertical: 10,
         width: '90%',
         alignSelf: 'center',
         fontFamily: "Avenir",
@@ -408,7 +411,8 @@ const styles = StyleSheet.create({
         padding: 20,
         borderRadius: 10,
         margin: 20,
-        height: '21%',
+        maxHeght: '80%',
+        justifyContent: 'center',
     },
     modalHeader: {
         flexDirection: 'row',

@@ -6,6 +6,9 @@ import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 
+// TODO (COMPLETE): remove items from list of respective household when user leaves group
+// TODO (COMPLETE): do not allow split bill on checked off items
+
 export default function HomeScreen() {
   // Household states
   const [households, setHouseholds] = useState([]); // Array of household objects that user is part of
@@ -35,8 +38,13 @@ export default function HomeScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false); // Bool of modal visibility
   const [editModalVisible, setEditModalVisible] = useState(false); // Bool of modal visibility
   const [householdModalVisible, setHouseholdModalVisible] = useState(false); // Bool of modal visibility
+  const [splitModalVisible, setSplitModalVisible] = useState(false); // Bool of modal visibility
   const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false); // Bool of modal visibility
   const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false); // Bool of modal visibility
+  const [costModalVisible, setCostModalVisible] = useState(false); // Bool of modal visibility
+
+  const [currentItemForCost, setCurrentItemForCost] = useState(null);
+  const [inputCost, setInputCost] = useState('');
 
   // Split bill states
   const [selectedMembers, setSelectedMembers] = useState([]); // Array of strings of household members IDs
@@ -191,7 +199,7 @@ export default function HomeScreen() {
   
   // Add a new item to Firestore
   const addItemToList = async () => {
-    if (newItemName.trim() === '' || newItemCategory.trim() === '' || newItemCost.trim() === '') {
+    if (newItemName.trim() === '' || newItemCategory.trim() === '') {
       Alert.alert('Error', 'Please enter an item, its category, and cost');
       return;
     }
@@ -199,7 +207,7 @@ export default function HomeScreen() {
     const newItemObj = {
       itemName: newItemName,
       category: newItemCategory,
-      cost: parseFloat(newItemCost),
+      cost: newItemCost ? parseFloat(newItemCost) : null,
       addedBy: auth.currentUser.email,
       isPurchased: false,
       addedDate: new Date(),
@@ -277,12 +285,18 @@ export default function HomeScreen() {
       Alert.alert('Error', 'Please select at least one item to split.');
       return;
     }
+
+    // filter out purchased (checked off) items from 
+    const unpaidItems = shoppingListItems.filter(
+      (item) => selectedItems.includes(item.id) && !item.isPurchased
+    );
   
     // Calculate the total cost of the selected items
-    const totalCost = shoppingListItems
-      .filter(item => selectedItems.includes(item.id))
-      .reduce((total, item) => total + parseFloat(item.cost || 0), 0);
-  
+    const totalCost = unpaidItems.reduce(
+      (total, item) => total + parseFloat(item.cost || 0),
+      0
+    );
+
     const splitAmount = totalCost / selectedMembers.length;
   
     Alert.alert('Split Amount', `Each selected member owes: $${splitAmount.toFixed(2)}`);
@@ -290,15 +304,19 @@ export default function HomeScreen() {
     // TODO: Logic to store/update split info in Firestore could go here
   };
 
-  // Toggle the purchased status of an item
-  const togglePurchased = async (itemId, currentStatus) => {
-    try {
-      // Update the purchased status in Firestore
-      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
-      await updateDoc(itemRef, { isPurchased: !currentStatus });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update item status. Please try again.');
-      console.error(error);
+  // Function to toggle the purchased status of an item
+  const togglePurchased = async (itemId, currentStatus, item) => {
+    if (!currentStatus) {
+      setCurrentItemForCost(item);
+      setCostModalVisible(true);
+    } else {
+      try {
+        const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+        await updateDoc(itemRef, { isPurchased: !currentStatus });
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update item status. Please try again.');
+        console.error(error);
+      }
     }
   };
 
@@ -328,7 +346,7 @@ export default function HomeScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Add item cost..."
+        placeholder="Add item cost (Optional)"
         value={newItemCost}
         onChangeText={setNewItemCost}
       />
@@ -377,7 +395,7 @@ export default function HomeScreen() {
               {/* Radio button to indicate that item has been purchased */}
               <TouchableOpacity 
                 style={styles.radioButton}
-                onPress={() => togglePurchased(item.id, item.isPurchased)}
+                onPress={() => togglePurchased(item.id, item.isPurchased, item)}
               >
                 <Ionicons
                   name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
@@ -469,7 +487,7 @@ export default function HomeScreen() {
 
             {/* Display list of items */}
             <FlatList
-              data={shoppingListItems}
+              data={shoppingListItems.filter((item) => !item.isPurchased)} // exclude checked off items
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -493,7 +511,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               )}
             />
-
+            
             <Button
               title="Confirm Split"
               onPress={() => {
@@ -504,7 +522,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-      
+
       {/* Modal for editing items */}
       <Modal
         visible={editModalVisible}
@@ -597,7 +615,58 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+
+    {/* Modal for cost */}
+    <Modal
+      visible={costModalVisible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setCostModalVisible(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.editModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Enter Item Cost</Text>
+            <Button title="Close" onPress={() => setCostModalVisible(false)} />
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter item cost"
+            value={inputCost}
+            onChangeText={setInputCost}
+            keyboardType="numeric"
+          />
+          <View style={styles.modalButtonContainer}>
+            <TouchableOpacity
+              style={styles.actionButtonWrapper}
+              onPress={async () => {
+                try {
+                  const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
+                  await updateDoc(itemRef, { isPurchased: true, cost: parseFloat(inputCost) });
+                  setCostModalVisible(false);
+                  setInputCost('');
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to update item cost. Please try again.');
+                  console.error(error);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButtonWrapper2}
+              onPress={() => {
+                setCostModalVisible(false);
+                setInputCost('');
+              }}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  </View>
   );
 }
 
@@ -758,4 +827,34 @@ const styles = StyleSheet.create({
     margin: 20,
     height: '60%',
   },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  actionButtonWrapper: {
+    backgroundColor: '#007BFF',
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    alignItems: 'center',
+    marginRight: 5,
+  },
+  actionButtonWrapper2: {
+    backgroundColor: '#FF6347',
+    padding: 10,
+    borderRadius: 4,
+    flex: 1,
+    alignItems: 'center',
+    marginLeft: 5,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  
 });
