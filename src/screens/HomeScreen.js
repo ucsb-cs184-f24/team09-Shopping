@@ -6,6 +6,9 @@ import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 
+// TODO (COMPLETE): remove items from list of respective household when user leaves group
+// TODO (COMPLETE): do not allow split bill on checked off items
+
 export default function HomeScreen() {
   const [households, setHouseholds] = useState([]); // Array of household objects that user is part of
   const [selectedHouseholdID, setSelectedHouseholdID] = useState('');  // String of ID of selected household
@@ -40,6 +43,13 @@ export default function HomeScreen() {
         ...doc.data()
       }));
       setHouseholds(userHouseholds);
+
+      // clear shopping list data if selected household no longer available
+      if (!userHouseholds.some(h => h.id === selectedHouseholdID)) {
+        setSelectedHouseholdID('');
+        setShoppingListMeta(null);
+        setShoppingListItems([]);
+      }
     });
 
     return () => unsubscribe();
@@ -47,7 +57,13 @@ export default function HomeScreen() {
   
   // Select household by updating householdId
   const selectHousehold = (householdId) => {
-    setSelectedHouseholdID(householdId);
+    if (householdId && households.some(h => h.id === householdId)) {
+      setSelectedHouseholdID(householdId);
+    } else {
+      setSelectedHouseholdID('');
+      setShoppingListMeta(null);
+      setShoppingListItems([]);
+    }
     setHouseholdModalVisible(false);
   };
 
@@ -243,12 +259,18 @@ export default function HomeScreen() {
       Alert.alert('Error', 'Please select at least one item to split.');
       return;
     }
+
+    // filter out purchased (checked off) items from 
+    const unpaidItems = shoppingListItems.filter(
+      (item) => selectedItems.includes(item.id) && !item.isPurchased
+    );
   
     // Calculate the total cost of the selected items
-    const totalCost = shoppingListItems
-      .filter(item => selectedItems.includes(item.id))
-      .reduce((total, item) => total + parseFloat(item.cost || 0), 0);
-  
+    const totalCost = unpaidItems.reduce(
+      (total, item) => total + parseFloat(item.cost || 0),
+      0
+    );
+
     const splitAmount = totalCost / selectedMembers.length;
   
     Alert.alert('Split Amount', `Each selected member owes: $${splitAmount.toFixed(2)}`);
@@ -439,7 +461,7 @@ export default function HomeScreen() {
 
       {/* Display list of items */}
       <FlatList
-        data={shoppingListItems}
+        data={shoppingListItems.filter((item) => !item.isPurchased)} // exclude checked off items
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
