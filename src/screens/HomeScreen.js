@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler'; // Import Swipeable
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where} from 'firebase/firestore'; 
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where, getFirestore, setDoc} from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig'; // Import Firestore and Auth config
 import { Picker } from '@react-native-picker/picker'; // Import Picker from the new package
 import { Ionicons } from '@expo/vector-icons';
@@ -67,8 +67,68 @@ export default function HomeScreen() {
     }
   }, [selectedCategory, shoppingList]); // Re-run when either selectedCategory or shoppingList changes
 
-  // Function to add a new item to Firestore
+   // Register user for notifications
+   useEffect(() => {
+    const registerForNotifications = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
 
+      if (status === 'granted') {
+        const token = (await Notifications.getExpoPushTokenAsync()).data;
+  
+         // Save the token in Firestore under the user's document
+        await setDoc(doc(db, 'users', auth.currentUser.uid), { fcmToken: token }, { merge: true });
+  
+        return token;
+      } else {
+        console.log('Notifications permission not granted.');
+      }
+    }
+    registerForNotifications();
+   }, []);
+
+  async function sendPushNotification(tokens, message) {
+    const payload = {
+      notification: {
+        title: "New Item Added",
+        body: message,
+      },
+      tokens: tokens, // Send to all tokens in the array
+    }
+  }
+
+  async function sendNotifToHousehold(newItemObj, selectedHousehold) {
+    const currentUserId = auth.currentUser.uid;
+    try {
+      await addDoc(collection(db, `households/${selectedHousehold}/groceryLists`), newItemObj);
+      setNewItem('');
+      setNewItemCategory('');
+
+      const householdRef = doc(db, 'households', selectedHousehold);
+      const householdSnapshot = await getDoc(householdRef);
+      const householdData = householdSnapshot.data();
+  
+      if (householdData && householdData.members) {
+        const membersToNotify = householdData.members.filter(memberId => memberId != currentUserId)
+        const tokens = [];
+        for (const memberId of membersToNotify) {
+          const userSnapshot = await getDoc(doc(db, 'users', memberId));
+          const userData = userSnapshot.data();
+          if (userData && userData.fcmToken) {
+            tokens.push(userData.fcmToken);
+          }
+        }
+
+        if (tokens.length > 0) {
+          await sendPushNotification(tokens, message);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item. Please try again.');
+      console.error(error);
+    }
+  };
+
+  // Function to add a new item to Firestore
   const addItemToList = async () => {
     if (newItem.trim() === '' || newItemCategory.trim() === '') {
       Alert.alert('Error', 'Please enter an item and its category');
@@ -101,7 +161,6 @@ export default function HomeScreen() {
       console.error(error);
     }
   };
-
   
   const deleteItem = async (itemId) => {
     try {
