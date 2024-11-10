@@ -140,6 +140,7 @@ export default function CreateHouseholdScreen({ navigation }) {
             onPress={() => navigation.navigate('HouseholdDetails', { householdId: item.id })}
         >
             <Text style={styles.householdText}>{item.displayHouseholdName}</Text>
+            <Ionicons name="chevron-forward-outline" size={20} color="#000" />
         </TouchableOpacity>
     );
 
@@ -150,63 +151,64 @@ export default function CreateHouseholdScreen({ navigation }) {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
+            {/* Header */}
             <View style={styles.screenHeader}>
                 <Text style={styles.title}>
                     {displayName ? `Welcome, ${displayName}!` : "Welcome!"}
                 </Text>
             </View>
 
-            <View style={styles.subtitleContainer}>
-                <Text style={styles.subtitle}>My households</Text>
-            </View>
-            <View style={styles.listContainer}>
-                {households.length > 0 ? (
-                    <FlatList 
-                        data={households}
-                        renderItem={renderHousehold}
-                        keyExtractor={item => item.id}
-                        style={styles.householdList}
-                    />
-                ) : (
-                    <Text style={styles.noHouseholdsText}>No households created yet! :(</Text>
-                )}
-            </View>
-
-            <View style={styles.actionButtonContainer}>
-                <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => setHouseholdModalVisible(true)}>
-                    <View style={styles.button}>
-                        <Ionicons name="add" size={20} color="#000" />
-                        <Text style={styles.buttonWithIcon}>Create Household</Text>
+            {/* Action Buttons */}
+            {households.length > 0 ? (  
+                <View style={styles.householdContainer}>
+                    <View style={styles.subtitleContainer}>
+                        <Text style={styles.subtitle}>My households</Text>
                     </View>
-                </TouchableOpacity>
+                    <View style={styles.listContainer}>
+                        <FlatList 
+                            data={households}
+                            renderItem={renderHousehold}
+                            keyExtractor={item => item.id}
+                            style={styles.householdList}
+                        />
+                    </View>
+                    <View style={styles.actionButtonContainer}>
+                        <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => setHouseholdModalVisible(true)}>
+                            <View style={styles.button}>
+                                <Ionicons name="add" size={16} color="#FFF" />
+                                <Text style={styles.buttonWithIcon}>Create Household</Text>
+                            </View>
+                        </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => navigation.navigate('JoinHousehold')}>
-                    <Text style={styles.buttonText}>Join a household</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* <View style={styles.header}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter household name"
-                    value={householdName}
-                    onChangeText={setHouseholdName}
-                />
-                {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-                <View style={styles.buttonContainer}>
-                    <View style={styles.buttonWrapper}>
-                        <Button title="Create Household" onPress={createHousehold} />
+                        <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => navigation.navigate('JoinHousehold')}>
+                            <View style={styles.button}>
+                                <Ionicons name="home-outline" size={16} color="#FFF" />
+                                <Text style={styles.buttonWithIcon}>Join a household</Text>
+                            </View>
+                        </TouchableOpacity>
                     </View>
                 </View>
-            </View> */}
+            ) : (
+                <View style={styles.noHouseholdsContainer}>
+                    <Text style={styles.noHouseholdsText}>Get started!</Text>
+                    <View style={styles.actionButtonContainerNoHouseholds}>
+                        <TouchableOpacity style={styles.actionButtonWrapperNoHouseholds} onPress={() => setHouseholdModalVisible(true)}>
+                            <View style={styles.button}>
+                                <Ionicons name="add" size={16} color="#FFF" />
+                                <Text style={styles.buttonWithIcon}>Create Household</Text>
+                            </View>
+                        </TouchableOpacity>
 
-            {/* <TouchableOpacity
-                style={styles.fab}
-                onPress={() => navigation.navigate('JoinHousehold')}
-            >
-                <Icon name="add" size={30} color='#fff' />
-            </TouchableOpacity> */}
+                        <TouchableOpacity style={styles.actionButtonWrapperNoHouseholds} onPress={() => navigation.navigate('JoinHousehold')}>
+                            <View style={styles.button}>
+                                <Ionicons name="home-outline" size={16} color="#FFF" />
+                                <Text style={styles.buttonWithIcon}>Join a household</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
 
+            )}
             <Modal
                 transparent={true}
                 visible={householdModalVisible}
@@ -228,7 +230,7 @@ export default function CreateHouseholdScreen({ navigation }) {
 
                         <View style={styles.modalButtonContainer}>
                             <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => createHousehold()}>
-                                <Text style={styles.buttonText}>Create!</Text>
+                                <Text style={styles.buttonWithIcon}>Create!</Text>
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 style={styles.actionButtonWrapper2} 
@@ -237,7 +239,7 @@ export default function CreateHouseholdScreen({ navigation }) {
                                     setErrorMessage(""); // Clear error message on Cancel
                                 }}    
                             >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <Text style={styles.buttonWithIcon}>Cancel</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -263,37 +265,44 @@ const styles = StyleSheet.create({
     },
 
     screenHeader: {
-        marginTop: 0,
         flexDirection: 'row',
-        backgroundColor: '#D1FADF',
         borderBottomLeftRadius: 27,
         borderBottomRightRadius: 27,
     },
     title: {
         fontSize: 28,
-        marginTop: 70,
-        marginBottom: 20,
+        marginTop: 80,
         marginLeft: 20,
         fontFamily: "Avenir",
+        opacity: 0.5,
+    },
+    householdContainer: {
+        backgroundColor: "#ECECEC", // Secondary Color
+        marginLeft: 20,
+        marginRight: 20,
+        marginTop: 32,
+        borderRadius: 8,
+        shadowColor: '#000000',  // Black color
+        shadowOffset: { width: 0, height: 3 },  // Position X: 0, Y: 3
+        shadowOpacity: 0.2,  // 20% opacity
+        shadowRadius: 5,  // Blur
     },
     subtitleContainer: {
         marginTop: 24,
         alignItems: 'flex-start',  
+
     },
     listContainer: {
         marginTop: 6,
         alignItems: 'flex-start',  
         justifyContent: "center",
-        alignItems: 'center',
-        marginBottom: 12,
     },
     subtitle: {
         fontSize: 18,
-        marginBottom: 3,
         marginLeft: 20,
         textAlign: 'left',
         fontFamily: "Avenir",
-        fontWeight: 'bold',
+        opacity: 0.8,
     },
     householdList: {
         padding: 20,
@@ -305,13 +314,12 @@ const styles = StyleSheet.create({
         padding: 14,
         width: '100%',
         backgroundColor: '#fff',
-        marginBottom: 8,
-        borderColor: "#000",
-        borderWidth: 1,  
+        marginBottom: 5,
         borderRadius: 10,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: "#F5F5F5"
+        backgroundColor: "#F5F5F5",
+        gap: 240,
     },
     householdText: {
         fontSize: 18,
@@ -324,36 +332,64 @@ const styles = StyleSheet.create({
         marginTop: 20,
         fontFamily: "Avenir",
     },
-    actionButtonContainer: {
-        flexDirection: 'row',
+    noHouseholdsContainer: {
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 10,
+    },
+    actionButtonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 20,
+        marginRight: 20,
+        marginBottom: 20,
+        gap: 10,
+    },
+    actionButtonContainerNoHouseholds: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 18,
+        marginLeft: 20,
+        marginRight: 20,
+        marginBottom: 20,
+        gap: 16,
+    },
+    actionButtonWrapper: { // Households exist
+        backgroundColor: "#008F7A",
+        flexDirection:'row',
+        padding: 11,
+        borderRadius: 8,
+    },
+    actionButtonWrapperNoHouseholds: { // No households exist
+        backgroundColor: "#008F7A",
+        flexDirection:'row',
+        paddingRight: 15,
+        paddingLeft: 15,
+        paddingTop: 45,
+        paddingBottom: 45,
+        borderRadius: 8,
+    },
+    actionButtonWrapper2: {
+        backgroundColor: "red",
+        flexDirection:'row',
+        padding: 11,
+        borderRadius: 8,
     },
     modalButtonContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 10,
-    },
-    actionButtonWrapper: {
-        backgroundColor: "#E0F7FF",
-        flexDirection:'row',
-        padding: 10,
-        borderRadius: 8,
-        marginRight: 10,
-    },
-    actionButtonWrapper2: {
-        backgroundColor: "red",
-        flexDirection:'row',
-        padding: 10,
-        borderRadius: 8,
+        gap: 10,
+        marginTop: 2,
     },
     buttonWithIcon: {
-        color: "#000",
-        fontSize: 16,
+        color: "#FFF",
+        fontSize: 15,
         marginLeft: 5,
         fontFamily: "Avenir",
+        fontWeight: 'bold',
     },
     buttonText: {
         color: "#000",
@@ -373,7 +409,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ccc',
         padding: 10,
-        marginBottom: 10,
+        marginBottom: 6,
         borderRadius: 5,
         width: '90%',
         alignSelf: 'center',
