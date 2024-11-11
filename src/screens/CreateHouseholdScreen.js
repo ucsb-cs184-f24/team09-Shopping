@@ -6,6 +6,7 @@ import { getDoc, doc } from 'firebase/firestore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import ProfileScreen from './ProfileScreen';
 
 export default function CreateHouseholdScreen({ navigation }) {
     const [householdName, setHouseholdName] = useState('');
@@ -156,6 +157,7 @@ export default function CreateHouseholdScreen({ navigation }) {
                 <Text style={styles.title}>
                     {displayName ? `Welcome, ${displayName}!` : "Welcome!"}
                 </Text>
+
             </View>
 
             {/* Action Buttons */}
