@@ -157,7 +157,6 @@ export default function CreateHouseholdScreen({ navigation }) {
                 <Text style={styles.title}>
                     {displayName ? `Welcome, ${displayName}!` : "Welcome!"}
                 </Text>
-
             </View>
 
             {/* Action Buttons */}

@@ -273,7 +273,9 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.title}>Profile</Text> */}
+      <View style={styles.screenHeader}>
+        <Text style={styles.title}>My Profile</Text>
+      </View>
 
       <View style={styles.imageContainer}>
         {
@@ -285,6 +287,12 @@ export default function ProfileScreen() {
               <Ionicons name="camera-outline" size={20} color="black" />
             </TouchableOpacity>
           </View>
+      </View>
+
+      <View>
+        <View style={styles.nameContainer}>
+          <Text style={styles.name}>{name}</Text>
+        </View>
       </View>
 
       {/* Display user's email in the same format as other fields */}
@@ -395,6 +403,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
+  screenHeader: {
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
   imageContainer: {
     elevation:2,
     height:150,
@@ -403,6 +415,7 @@ const styles = StyleSheet.create({
     position:'relative',
     borderRadius:999,
     overflow:'hidden',
+    marginBottom: 18,
   },
   uploadBtnContainer:{
     gap: 1,
@@ -423,14 +436,23 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 40,
-    marginBottom: 16,
+    marginTop: 80,
+    // marginLeft: 20,
+    fontFamily: "Avenir",
+    opacity: 0.5,
   },
   info: {
     fontSize: 16,
     marginBottom: 12,
     textAlign: 'left',
+  },
+  nameContainer: {
+    marginBottom: 16,
+  },
+  name: {
+    fontSize: 18,
+    fontFamily: 'Avenir',
+    fontWeight: 'bold'
   },
   input: {
     width: '100%',
@@ -511,7 +533,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   creationDateContainer: {
-    marginTop: 250,
+    marginTop: 24,
     alignItems: 'center',
   },
   creationDateText: {

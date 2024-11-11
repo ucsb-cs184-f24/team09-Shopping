@@ -46,7 +46,11 @@ export default function App() {
                     headerShown: false,
                     tabBarLabel: 'Home' // Set the tab title here
                 }}   />
-            <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} /> 
+            <Tab.Screen name="Profile" component={ProfileScreen}
+                options={{ 
+                    headerShown: false,
+                    tabBarLabel: 'Profile' // Set the tab title here
+                }} /> 
         </Tab.Navigator>
     );
 }
