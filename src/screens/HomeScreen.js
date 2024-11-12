@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // TODO (COMPLETE): remove items from list of respective household when user leaves group
 // TODO (COMPLETE): do not allow split bill on checked off items
+// TODO (COMPLETE): Only allow split bill if household has more than 1 user, implement cleaner UI i.e. button padding
 
 export default function HomeScreen() {
   const [households, setHouseholds] = useState([]); // Array of household objects that user is part of
@@ -60,7 +61,7 @@ export default function HomeScreen() {
     if (householdId && households.some(h => h.id === householdId)) {
       setSelectedHouseholdID(householdId);
     } else {
-      setSelectedHouseholdID('');
+      setSelectedHouseholdID(null);
       setShoppingListMeta(null);
       setShoppingListItems([]);
     }
@@ -250,7 +251,7 @@ export default function HomeScreen() {
   };
 
   const splitBill = () => {
-    if (selectedMembers.length === 0) {
+    /* if (selectedMembers.length === 0) {
       Alert.alert('Error', 'Please select at least one member to split the bill.');
       return;
     }
@@ -258,7 +259,7 @@ export default function HomeScreen() {
     if (selectedItems.length === 0) {
       Alert.alert('Error', 'Please select at least one item to split.');
       return;
-    }
+    } */
 
     // filter out purchased (checked off) items from 
     const unpaidItems = shoppingListItems.filter(
@@ -327,6 +328,12 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
         <Text style={styles.householdButtonText}>Select Household</Text>
       </TouchableOpacity>
+
+      <Modal
+        visible={householdModalVisible}
+        animationType='slide'
+        transparent={true}
+        onRequestClose={() => setHouseholdModalVisible(false)}></Modal>
       
       <TextInput
         style={styles.input}
@@ -387,7 +394,17 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={styles.splitButton}
-        onPress={() => setSplitMembersModalVisible(true)}  // Update here to use the member modal state
+        onPress={() => {
+          if (!selectedHouseholdID) {
+            Alert.alert('Error', 'Please choose a household.');
+          } else if (shoppingListItems.length === 0) {
+            Alert.alert('Error', 'There are no items in the list for this household.');
+          } else if (householdMembers.length <= 1) {
+            Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
+          } else {
+            setSplitMembersModalVisible(true); // only open Split Bill modal if there are other members to split with
+          }
+        }}
       >
         <Text style={styles.splitButtonText}>Split the Bill</Text>
       </TouchableOpacity>
@@ -402,11 +419,11 @@ export default function HomeScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.splitModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Members to Split the Bill</Text>
+              <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
               <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
             </View>
             <FlatList
-              data={householdMembers}
+              data={householdMembers.filter(member => member.uid !== auth.currentUser.uid)} // exclude current user so cannot split with themselves
               keyExtractor={(item) => item.uid} // Use `uid` as the key
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -456,7 +473,9 @@ export default function HomeScreen() {
     <View style={styles.splitModalContent}>
       <View style={styles.modalHeader}>
         <Text style={styles.modalTitle}>Select Items to Split</Text>
-        <Button title="Close" onPress={() => setSplitItemsModalVisible(false)} />
+        <View style={styles.closeButtonContainer}>
+          <Button title="Close" onPress={() => setSplitItemsModalVisible(false)} />
+        </View>
       </View>
 
       {/* Display list of items */}
@@ -488,8 +507,12 @@ export default function HomeScreen() {
       <Button
         title="Confirm Split"
         onPress={() => {
-          splitBill();
-          setSplitItemsModalVisible(false);  // Correctly close the items modal
+          if (selectedItems.length === 0) {
+            Alert.alert('Error', 'Please select at least one item to split the bill.');
+          } else {
+            splitBill();
+            setSplitItemsModalVisible(false);  // Correctly close the items modal
+          }
         }}
       />
     </View>
@@ -518,6 +541,7 @@ export default function HomeScreen() {
       />
       <View style={styles.buttonContainer}>
         <Button title="Save" onPress={saveEdit} />
+        <View style={{ width: 15 }}/>
         <Button title="Cancel" onPress={() => setEditModalVisible(false)} color="red" />
       </View>
     </View>
@@ -559,20 +583,28 @@ export default function HomeScreen() {
             <Text style={styles.modalTitle}>Select a Household</Text>
             <Button title="Close" onPress={() => setHouseholdModalVisible(false)} />
           </View>
-          <Picker
-            selectedValue={selectedHouseholdID}
-            onValueChange={(itemValue) => selectHousehold(itemValue)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Select Household" value="" />
-            {households.map((household) => (
-              <Picker.Item
-                key={household.id}
-                label={household.displayHouseholdName || "Unnamed Household"}
-                value={household.id}
-              />
-            ))}
-          </Picker>
+          <View style={styles.pickerContainer}>
+            {households.length > 0 ? (
+              <Picker
+              selectedValue={selectedHouseholdID}
+              onValueChange={(itemValue) => selectHousehold(itemValue)}
+              style={styles.picker}
+              dropdownIconColor="#007BFF"
+              mode='dropdown' // dropdown for android
+            >
+              <Picker.Item label="Select Household" value="" />
+              {households.map((household) => (
+                <Picker.Item
+                  key={household.id}
+                  label={household.displayHouseholdName || "Unnamed Household"}
+                  value={household.id}
+                />
+              ))}
+            </Picker>
+            ) : (
+              <Text style={styles.noHouseholdsText}>No households available :(</Text>
+            )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -586,6 +618,12 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#fff',
     paddingTop: 40,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    padding: 10,
+    marginTop: 10,
   },
   title: {
     fontSize: 24,
@@ -671,23 +709,43 @@ const styles = StyleSheet.create({
     margin: 20,
     justifyContent: 'center',
     height: '25%',
+    minHeight: 200,
   },
   filterModalContent: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 10,
-    margin: 20,
     height: '38%',
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5, // Android shadow
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    paddingTop: 10,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  closeButtonContainer: {
+    paddingLeft: 10,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#f9f9f9',
+    paddingHorizontal: 5,
+    marginTop: 10,
   },
   picker: {
     height: 150,
@@ -739,9 +797,21 @@ const styles = StyleSheet.create({
   splitModalContent: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 10,
-    margin: 20,
-    height: '60%',
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 10,
+    minHeight: '50%',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4, // shadow for IOS
+    elevation: 5, // shadow for android
   },
-  
+  noHouseholdsText: {
+    fontSize: 16,
+    color: '#777',
+    textAlign: 'center',
+    marginTop: 10,
+  },
 });
