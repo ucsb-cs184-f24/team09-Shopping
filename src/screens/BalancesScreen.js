@@ -42,6 +42,8 @@ export default function BalancesScreen() {
   const [payToItems, setPayToItems] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [balances, setBalances] = useState([]);
+    const [netBalances, setNetBalances] = useState([]);
+
 
 
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function BalancesScreen() {
           ...doc.data(),
         }));
         setBalances(balancesData);
+        calculateNetBalances(balancesData);
       });
   
       return () => unsubscribe();
@@ -86,6 +89,38 @@ export default function BalancesScreen() {
 
     fetchHouseholds();
   }, []);
+
+
+
+  const calculateNetBalances = (balancesData) => {
+    const netBalanceMap = {};
+    balancesData.forEach((balance) => {
+      const { owedBy, owedTo, amount } = balance;
+      if (!netBalanceMap[owedBy]) netBalanceMap[owedBy] = {};
+      if (!netBalanceMap[owedTo]) netBalanceMap[owedTo] = {};
+      
+
+      // Owed by owedBy to owedTo
+      if (!netBalanceMap[owedBy][owedTo]) {
+        netBalanceMap[owedBy][owedTo] = 0;
+      }
+      netBalanceMap[owedBy][owedTo] += amount;
+    });
+
+    const netBalancesList = [];
+    for (const owedBy in netBalanceMap) {
+      for (const owedTo in netBalanceMap[owedBy]) {
+        if (netBalanceMap[owedBy][owedTo] > 0) {
+          netBalancesList.push({
+            owedBy,
+            owedTo,
+            amount: netBalanceMap[owedBy][owedTo],
+          });
+        }
+      }
+    }
+    setNetBalances(netBalancesList);
+  };
 
   // Fetch balance details whenever selected household changes
 // Fetch balance details whenever selected household changes
@@ -180,6 +215,19 @@ useEffect(() => {
         dropDownContainerStyle={styles.dropdownContainer}
         listMode="SCROLLVIEW"
       />
+
+
+            {/* Net Balances Summary */}
+            {netBalances.length > 0 && (
+              <View style={styles.netBalancesContainer}>
+                {netBalances.map((balance, index) => (
+                  <Text key={index} style={styles.netBalanceText}>
+                    {balance.owedBy} owes {balance.owedTo}: ${balance.amount.toFixed(2)}
+                  </Text>
+                ))}
+              </View>
+            )}
+
   
       {/* Balances List */}
       {selectedHouseholdId ? (
@@ -449,6 +497,12 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     alignItems: 'center',
+  },
+  netBalanceText: {
+    fontSize: 14,
+    color: '#003366',
+    fontWeight: '600',
+    marginBottom: 5,
   },
 
 
