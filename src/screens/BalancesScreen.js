@@ -92,21 +92,43 @@ export default function BalancesScreen() {
 
 
 
-  const calculateNetBalances = (balancesData) => {
+  const calculateNetBalances = async (balancesData) => {
     const netBalanceMap = {};
+    
+    // Fetch household members details to get usernames
+    const householdDocRef = doc(db, 'households', selectedHouseholdId);
+    const householdDoc = await getDoc(householdDocRef);
+    const members = householdDoc.data().members;
+  
+    const membersInfo = await Promise.all(
+      members.map(async (uid) => {
+        try {
+          const userDocRef = doc(db, 'users', uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            return { uid, name: userDoc.data().name };
+          }
+        } catch (error) {
+          console.error(`Failed to fetch user with UID: ${uid}`, error);
+        }
+        return null;
+      })
+    );
+  
+    const householdMembers = membersInfo.filter(info => info !== null);
+  
     balancesData.forEach((balance) => {
       const { owedBy, owedTo, amount } = balance;
+  
       if (!netBalanceMap[owedBy]) netBalanceMap[owedBy] = {};
       if (!netBalanceMap[owedTo]) netBalanceMap[owedTo] = {};
-      
-
-      // Owed by owedBy to owedTo
+  
       if (!netBalanceMap[owedBy][owedTo]) {
         netBalanceMap[owedBy][owedTo] = 0;
       }
       netBalanceMap[owedBy][owedTo] += amount;
     });
-
+  
     const netBalancesList = [];
     for (const owedBy in netBalanceMap) {
       for (const owedTo in netBalanceMap[owedBy]) {
@@ -114,14 +136,19 @@ export default function BalancesScreen() {
           netBalancesList.push({
             owedBy,
             owedTo,
+            owedByUsername:
+              householdMembers.find((member) => member.uid === owedBy)?.name || owedBy,
+            owedToUsername:
+              householdMembers.find((member) => member.uid === owedTo)?.name || owedTo,
             amount: netBalanceMap[owedBy][owedTo],
           });
         }
       }
     }
+  
     setNetBalances(netBalancesList);
   };
-
+  
   // Fetch balance details whenever selected household changes
 // Fetch balance details whenever selected household changes
 useEffect(() => {
@@ -217,18 +244,16 @@ useEffect(() => {
       />
 
 
-            {/* Net Balances Summary */}
-            {netBalances.length > 0 && (
-              <View style={styles.netBalancesContainer}>
-                {netBalances.map((balance, index) => (
-                  <Text key={index} style={styles.netBalanceText}>
-                    {balance.owedBy} owes {balance.owedTo}: ${balance.amount.toFixed(2)}
-                  </Text>
-                ))}
-              </View>
-            )}
+        {netBalances.length > 0 && (
+          <View style={styles.netBalancesContainer}>
+            {netBalances.map((balance, index) => (
+              <Text key={index} style={styles.netBalanceText}>
+                {balance.owedByUsername} owes {balance.owedToUsername}: ${balance.amount.toFixed(2)}
+              </Text>
+            ))}
+          </View>
+        )}
 
-  
       {/* Balances List */}
       {selectedHouseholdId ? (
       <FlatList

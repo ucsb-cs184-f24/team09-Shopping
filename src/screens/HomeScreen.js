@@ -294,22 +294,21 @@ export default function HomeScreen() {
   };
   
   
-
   const toggleItemSelection = (item) => {
     setSelectedItems((prevSelected) => {
       const isSelected = prevSelected.find((selectedItem) => selectedItem.id === item.id);
       if (isSelected) {
         // If already selected, remove the item
+        togglePurchased(item.id, item.isPurchased, item); // Update the purchase status
         return prevSelected.filter((selectedItem) => selectedItem.id !== item.id);
       } else {
         // Add full item object to selectedItems
+        togglePurchased(item.id, item.isPurchased, item); // Update the purchase status
         return [...prevSelected, item];
       }
     });
   };
   
-  
-
   const togglePurchased = async (itemId, currentStatus, item) => {
     if (!currentStatus) {
       setCurrentItemForCost(item);
@@ -323,8 +322,10 @@ export default function HomeScreen() {
         console.error(error);
       }
     }
-    
   };
+  
+  
+
   
 
   // Render edit and delete buttons for Swipeable
