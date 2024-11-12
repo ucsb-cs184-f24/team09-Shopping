@@ -85,8 +85,7 @@ export default function RegisterScreen({ navigation }) {
 
                 <View style={styles.backButtonContainer}>
                     <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <Icon name="arrow-back" size={24} color="#000" />
-                        <Text style={styles.backButtonText}>Back</Text>
+                        <Ionicons name="chevron-back-outline" size={24} color="#000" />
                     </TouchableOpacity>
                 </View>
 
@@ -161,12 +160,11 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
-        paddingTop: 80,
+        backgroundColor: "#FFF",
     },
     headerContainer: {
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 32,
     },
     logo: {
         width: 100,
@@ -177,24 +175,33 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#333',
+        fontFamily: 'Avenir',
     },
     subText: {
         fontSize: 16,
         color: '#666',
         textAlign: 'center',
         marginTop: 5,
-        marginBottom: 15,
+        fontFamily: 'Avenir',
     },
     inputContainer: {
-        width: '80%'
+        backgroundColor: "#ECECEC",
+        padding: 15,
+        borderRadius: 8,
+        marginRight: 30,
+        marginLeft: 30,
+        shadowColor: '#000000',  // Black color
+        shadowOffset: { width: 0, height: 3 },  // Position X: 0, Y: 3
+        shadowOpacity: 0.2,  // 20% opacity
+        shadowRadius: 5,  // Blur
+        gap: 10,
     },
     input: {
         backgroundColor: 'white',
-        width: '100%',
-        borderColor: '#ccc',
-        padding: 10,
-        marginTop: 5,
-        borderRadius: 4,
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+        borderRadius: 8,
+        fontFamily: 'Avenir'
     },
     passwordContainer: {
         flexDirection: 'row',
@@ -202,8 +209,7 @@ const styles = StyleSheet.create({
         width: '100%',
         borderWidth: 1,
         borderColor: '#ccc',
-        borderRadius: 4,
-        marginTop: 5,
+        borderRadius: 8,
         paddingHorizontal: 10,
         backgroundColor: 'white',
     },
@@ -211,38 +217,40 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 10,
         paddingHorizontal: 5,
+        fontFamily: 'Avenir'
     },
     buttonContainer: {
-        width: '60%',
+        padding: 15,
+        marginRight: 30,
+        marginLeft: 30,
+        width: '90%',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 40
+        marginTop: 24,
+        gap: 20,
     },
     button: {
-        backgroundColor: '#0782F9',
         width: '100%',
+        backgroundColor: '#008F7A',
         padding: 15,
         borderRadius: 10,
         alignItems: 'center'
     },
     buttonText: {
         color: 'white',
-        fontWeight: '700',
-        fontSize: 16
+        fontWeight: 'bold',
+        fontSize: 16,
+        fontFamily: 'Avenir',
     },
     backButtonContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         position: 'absolute',
-        top: 40,
-        left: 20,
+        top: 75,
+        left: 25,
     },
     backButton: {
         flexDirection: 'row',
         alignItems: 'center',
-    },
-    backButtonText: {
-        fontSize: 16,
-        marginLeft: 5,
     },
 });

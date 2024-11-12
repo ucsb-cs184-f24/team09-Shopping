@@ -26,7 +26,7 @@ export default function App() {
 
                 return <Ionicons name={iconName} size={size} color={color} />;
                 },
-                tabBarActiveTintColor: '#003366',
+                tabBarActiveTintColor: '#008F7A',
                 tabBarInactiveTintColor: 'gray',
 
                 // Customize the header title style and remove border for iOS
@@ -48,8 +48,11 @@ export default function App() {
                     tabBarLabel: 'Home' // Set the tab title here
                 }}   />
             <Tab.Screen name="Balances" component={BalancesScreen} options={{title: 'Balances'}} />
-
-            <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} /> 
+            <Tab.Screen name="Profile" component={ProfileScreen}
+                options={{ 
+                    headerShown: false,
+                    tabBarLabel: 'Profile' // Set the tab title here
+                }} /> 
         </Tab.Navigator>
     );
 }
