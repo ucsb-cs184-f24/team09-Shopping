@@ -298,16 +298,15 @@ export default function HomeScreen() {
     setSelectedItems((prevSelected) => {
       const isSelected = prevSelected.find((selectedItem) => selectedItem.id === item.id);
       if (isSelected) {
-        // If already selected, remove the item
-        togglePurchased(item.id, item.isPurchased, item); // Update the purchase status
+        // Remove item from split selection
         return prevSelected.filter((selectedItem) => selectedItem.id !== item.id);
       } else {
-        // Add full item object to selectedItems
-        togglePurchased(item.id, item.isPurchased, item); // Update the purchase status
+        // Add item to split selection
         return [...prevSelected, item];
       }
     });
   };
+  
   
   const togglePurchased = async (itemId, currentStatus, item) => {
     if (!currentStatus) {
@@ -410,7 +409,7 @@ export default function HomeScreen() {
               {/* Radio button to indicate that item has been purchased */}
               <TouchableOpacity 
                 style={styles.radioButton}
-                onPress={() => toggleItemSelection(item)}
+                onPress={() => togglePurchased(item.id, item.isPurchased, item)}
               >
                 <Ionicons
                   name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
