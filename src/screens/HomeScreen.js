@@ -287,6 +287,9 @@ export default function HomeScreen() {
   
     try {
       await updateBalancesAfterSplit(selectedHouseholdID, selectedMembers, splitAmount, selectedItems);
+      for (const item of selectedItems) {
+        await deleteItem(item.id);
+      }
     } catch (error) {
       console.error('Error updating balances:', error);
       Alert.alert('Error', 'Failed to record the split.');
