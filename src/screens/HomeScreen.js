@@ -5,6 +5,8 @@ import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, quer
 import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import { updateBalancesAfterSplit } from './BalancesScreen'; // Import the Firestore update function
+
 
 // TODO (COMPLETE): remove items from list of respective household when user leaves group
 // TODO (COMPLETE): do not allow split bill on checked off items
@@ -34,6 +36,8 @@ export default function HomeScreen() {
   const [costModalVisible, setCostModalVisible] = useState(false);
   const [currentItemForCost, setCurrentItemForCost] = useState(null);
   const [inputCost, setInputCost] = useState('');
+  
+
 
   // Fetch the households associated with the user
   useEffect(() => {
@@ -186,7 +190,7 @@ export default function HomeScreen() {
     const newItemObj = {
       itemName: newItem,
       category: newItemCategory,
-      cost: newItemCost ? parseFloat(newItemCost) : null,
+      cost: newItemCost ? parseFloat(newItemCost) : 0,
       addedBy: auth.currentUser.email,
       isPurchased: false,
       addedDate: new Date(),
@@ -252,7 +256,8 @@ export default function HomeScreen() {
     }
   };
 
-  const splitBill = () => {
+  
+  const splitBill = async () => {
     if (selectedMembers.length === 0) {
       Alert.alert('Error', 'Please select at least one member to split the bill.');
       return;
@@ -262,26 +267,49 @@ export default function HomeScreen() {
       Alert.alert('Error', 'Please select at least one item to split.');
       return;
     }
-
-    // filter out purchased (checked off) items from 
-    const unpaidItems = shoppingListItems.filter(
-      (item) => selectedItems.includes(item.id) && !item.isPurchased
-    );
   
-    // Calculate the total cost of the selected items
-    const totalCost = unpaidItems.reduce(
-      (total, item) => total + parseFloat(item.cost || 0),
-      0
-    );
-
-    const splitAmount = totalCost / selectedMembers.length;
+    console.log('Selected Items for Splitting:', selectedItems);
+  
+    let totalCost = 0;
+  
+    // Use full item objects to calculate total cost
+    selectedItems.forEach((item) => {
+      const itemCost = item.cost !== undefined ? parseFloat(item.cost) : 0;
+      console.log(`Item: ${item.itemName || item.id}, Cost: ${itemCost}`);
+      totalCost += itemCost;
+    });
+  
+    console.log('Total Cost:', totalCost);
+    const splitAmount = parseFloat((totalCost / selectedMembers.length).toFixed(2));
+    console.log('Split Amount:', splitAmount);
   
     Alert.alert('Split Amount', `Each selected member owes: $${splitAmount.toFixed(2)}`);
   
-    // Logic to store/update split info in Firestore could go here
+    try {
+      await updateBalancesAfterSplit(selectedHouseholdID, selectedMembers, splitAmount, selectedItems);
+    } catch (error) {
+      console.error('Error updating balances:', error);
+      Alert.alert('Error', 'Failed to record the split.');
+    }
   };
+  
+  
 
-  // Function to toggle the purchased status of an item
+  const toggleItemSelection = (item) => {
+    setSelectedItems((prevSelected) => {
+      const isSelected = prevSelected.find((selectedItem) => selectedItem.id === item.id);
+      if (isSelected) {
+        // If already selected, remove the item
+        return prevSelected.filter((selectedItem) => selectedItem.id !== item.id);
+      } else {
+        // Add full item object to selectedItems
+        return [...prevSelected, item];
+      }
+    });
+  };
+  
+  
+
   const togglePurchased = async (itemId, currentStatus, item) => {
     if (!currentStatus) {
       setCurrentItemForCost(item);
@@ -289,13 +317,15 @@ export default function HomeScreen() {
     } else {
       try {
         const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
-        await updateDoc(itemRef, { isPurchased: !currentStatus });
+        await updateDoc(itemRef, { isPurchased: !currentStatus, cost: item.cost ? parseFloat(item.cost) : 0 });
       } catch (error) {
         Alert.alert('Error', 'Failed to update item status. Please try again.');
         console.error(error);
       }
     }
+    
   };
+  
 
   // Render edit and delete buttons for Swipeable
   const renderRightActions = (item) => (
@@ -466,32 +496,29 @@ export default function HomeScreen() {
         <Button title="Close" onPress={() => setSplitItemsModalVisible(false)} />
       </View>
 
-      {/* Display list of items */}
       <FlatList
-        data={shoppingListItems.filter((item) => !item.isPurchased)} // exclude checked off items
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={{
-              padding: 10,
-              backgroundColor: selectedItems.includes(item.id) ? '#007BFF' : '#fff',
-              borderRadius: 4,
-              marginBottom: 5,
-            }}
-            onPress={() => {
-              setSelectedItems(prevSelected =>
-                prevSelected.includes(item.id)
-                  ? prevSelected.filter(i => i !== item.id)
-                  : [...prevSelected, item.id]
-              );
-            }}
-          >
-            <Text style={{ color: selectedItems.includes(item.id) ? '#fff' : '#000' }}>
-              {item.itemName} - ${item.cost}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+          data={shoppingListItems.filter((item) => item.isPurchased)}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={{
+                padding: 10,
+                backgroundColor: selectedItems.some((selectedItem) => selectedItem.id === item.id) ? '#007BFF' : '#fff',
+                borderRadius: 4,
+                marginBottom: 5,
+              }}
+              onPress={() => {
+                toggleItemSelection(item); // Pass the full item object here
+              }}
+            >
+              <Text style={{ color: selectedItems.some((selectedItem) => selectedItem.id === item.id) ? '#fff' : '#000' }}>
+                {item.itemName} - ${item.cost}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+
+
       <Button
         title="Confirm Split"
         onPress={() => {
