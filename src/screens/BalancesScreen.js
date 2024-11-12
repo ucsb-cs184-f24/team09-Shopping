@@ -165,8 +165,8 @@ useEffect(() => {
             // Map through itemsDetails to extract item name and cost
             const itemDetailsArray = balance.itemsDetails && Array.isArray(balance.itemsDetails)
               ? balance.itemsDetails.map((item) => ({
-                  name: item.name || 'Unnamed Item',
-                  cost: item.amount || item.cost || 0, // Use `amount` or `cost`
+                  name: item.itemName || 'Unnamed Item',
+                  cost: item.cost || 0, // Use `amount` or `cost`
                 }))
               : [];
 

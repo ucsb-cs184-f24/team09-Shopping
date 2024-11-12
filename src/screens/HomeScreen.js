@@ -409,7 +409,7 @@ export default function HomeScreen() {
               {/* Radio button to indicate that item has been purchased */}
               <TouchableOpacity 
                 style={styles.radioButton}
-                onPress={() => togglePurchased(item.id, item.isPurchased, item)}
+                onPress={() => toggleItemSelection(item)}
               >
                 <Ionicons
                   name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
