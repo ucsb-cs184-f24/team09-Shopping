@@ -91,7 +91,10 @@ export default function BalancesScreen() {
 // Fetch balance details whenever selected household changes
 useEffect(() => {
   if (selectedHouseholdId) {
-    const balancesRef = collection(db, `households/${selectedHouseholdId}/balances`);
+    const balancesRef = query(
+      collection(db, `households/${selectedHouseholdId}/balances`),
+      orderBy('createdAt', 'desc') // Order by createdAt field in descending order (newest first)
+    );
     const unsubscribe = onSnapshot(balancesRef, async (balancesSnapshot) => {
       try {
         // Fetch household members details to get usernames
@@ -151,6 +154,14 @@ useEffect(() => {
   }
 }, [selectedHouseholdId, households]);
 
+
+
+
+
+
+
+
+
   return (
     <View style={styles.container}>
       {/* Header Section */}
@@ -205,7 +216,9 @@ useEffect(() => {
                 : `+$${item.amount.toFixed(2)}`}
             </Text>
             <Text style={styles.transactionDate}>
-              Date: {item.createdAt ? item.createdAt.toDate().toLocaleString() : 'Unknown date'}
+              Date: {item.createdAt 
+                ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}` 
+                : 'Unknown date'}
             </Text>
           </View>
         )}
@@ -333,7 +346,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    marginVertical: 15,
+    marginVertical: 8,
   },
   recordPaymentButtonText: {
     color: '#fff',
@@ -352,6 +365,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     alignItems: 'center',
+    
   },
   modalTitle: {
     fontSize: 20,
@@ -428,6 +442,13 @@ const styles = StyleSheet.create({
   },
   positiveAmount: {
     color: '#4CAF50',
+  },
+  footer: {
+    position: 'absolute', // Sticks the footer to a fixed position
+    bottom: 0, // Keeps the button at the bottom with some margin from the bottom edge
+    left: 20,
+    right: 20,
+    alignItems: 'center',
   },
 
 
