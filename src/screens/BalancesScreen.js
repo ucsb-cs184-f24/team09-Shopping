@@ -8,30 +8,17 @@ import { db, auth } from '../../firebaseConfig';
 export const updateBalancesAfterSplit = async (selectedHouseholdID, selectedMembers, splitAmount, itemsDetails) => {
   try {
     const userId = auth.currentUser.uid;
-
     for (let member of selectedMembers) {
       if (member !== userId) {
-        // Reference the balance document
-        const balanceRef = doc(db, `households/${selectedHouseholdID}/balances`, `${member}_${userId}`);
-        const balanceDoc = await getDoc(balanceRef);
-
-        let newAmount = splitAmount;
-        let updatedItemsDetails = itemsDetails;
-
-        if (balanceDoc.exists()) {
-          // Append to the existing amount and merge item details
-          newAmount += balanceDoc.data().amount;
-          updatedItemsDetails = [...(balanceDoc.data().itemsDetails || []), ...itemsDetails];
-        }
-
-        // Update the Firestore document with new balance information
-        await setDoc(balanceRef, {
+        // Create a new document for each transaction instead of updating existing one
+        const newTransactionRef = doc(collection(db, `households/${selectedHouseholdID}/balances`));
+        await setDoc(newTransactionRef, {
           owedBy: member,
           owedTo: userId,
-          amount: newAmount,
-          itemsDetails: updatedItemsDetails,
-          updatedAt: new Date(),
-        }, { merge: true }); // Use { merge: true } to update fields without overwriting
+          amount: splitAmount,
+          itemsDetails: itemsDetails,
+          createdAt: serverTimestamp(),
+        });
       }
     }
   } catch (error) {
@@ -39,6 +26,7 @@ export const updateBalancesAfterSplit = async (selectedHouseholdID, selectedMemb
     throw new Error('Failed to update balances after split');
   }
 };
+
 
 // Main BalancesScreen component
 export default function BalancesScreen() {
@@ -53,6 +41,25 @@ export default function BalancesScreen() {
   const [payTo, setPayTo] = useState('');
   const [payToItems, setPayToItems] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [balances, setBalances] = useState([]);
+
+
+  useEffect(() => {
+    if (selectedHouseholdId) {
+      const balancesRef = collection(db, `households/${selectedHouseholdId}/balances`);
+      const unsubscribe = onSnapshot(balancesRef, (snapshot) => {
+        const balancesData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setBalances(balancesData);
+      });
+  
+      return () => unsubscribe();
+    }
+  }, [selectedHouseholdId]);
+  
+
 
   // Fetch households associated with the user
   useEffect(() => {
@@ -81,178 +88,148 @@ export default function BalancesScreen() {
   }, []);
 
   // Fetch balance details whenever selected household changes
-  useEffect(() => {
-    if (selectedHouseholdId) {
-      const balancesRef = collection(db, `households/${selectedHouseholdId}/balances`);
-      const unsubscribe = onSnapshot(balancesRef, (balancesSnapshot) => {
+// Fetch balance details whenever selected household changes
+useEffect(() => {
+  if (selectedHouseholdId) {
+    const balancesRef = collection(db, `households/${selectedHouseholdId}/balances`);
+    const unsubscribe = onSnapshot(balancesRef, async (balancesSnapshot) => {
+      try {
+        // Fetch household members details to get usernames
+        const householdDocRef = doc(db, 'households', selectedHouseholdId);
+        const householdDoc = await getDoc(householdDocRef);
+        const members = householdDoc.data().members;
+
+        const membersInfo = await Promise.all(
+          members.map(async (uid) => {
+            try {
+              const userDocRef = doc(db, 'users', uid);
+              const userDoc = await getDoc(userDocRef);
+              if (userDoc.exists()) {
+                return { uid, name: userDoc.data().name };
+              }
+            } catch (error) {
+              console.error(`Failed to fetch user with UID: ${uid}`, error);
+            }
+            return null;
+          })
+        );
+
+        const householdMembers = membersInfo.filter(info => info !== null);
+
+        // Map balances to include owedByUsername and owedToUsername
         const balancesData = balancesSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-        setOwedDetails(balancesData.map(balance => ({
-          ...balance,
-          owedByUsername: households.find(h => h.id === selectedHouseholdId)?.members.find(m => m === balance.owedBy)?.username || balance.owedBy,
-          owedToUsername: households.find(h => h.id === selectedHouseholdId)?.members.find(m => m === balance.owedTo)?.username || balance.owedTo,
-          itemsDetails: balance.itemsDetails || [], // Ensure itemsDetails are included
-        })));
-      });
 
-      return () => unsubscribe();
-    }
-  }, [selectedHouseholdId, households]);
+        setTransactions(
+          balancesData.map((balance) => {
+            // Map through itemsDetails to extract item name and cost
+            const itemDetailsArray = balance.itemsDetails && Array.isArray(balance.itemsDetails)
+              ? balance.itemsDetails.map((item) => ({
+                  name: item.name || 'Unnamed Item',
+                  cost: item.amount || item.cost || 0, // Use `amount` or `cost`
+                }))
+              : [];
 
-  // Record a payment
-  const handleRecordPayment = () => {
-    if (!paymentAmount || !payTo) {
-      Alert.alert('Error', 'Please enter a valid amount and select a person to pay.');
-      return;
-    }
-
-    setIsPaymentModalVisible(false);
-    recordPayment();
-  };
-
-  const recordPayment = async () => {
-    try {
-      if (!selectedHouseholdId) {
-        Alert.alert('Error', 'Please select a household first.');
-        return;
+            return {
+              ...balance,
+              owedByUsername:
+                householdMembers.find((member) => member.uid === balance.owedBy)?.name || balance.owedBy,
+              owedToUsername:
+                householdMembers.find((member) => member.uid === balance.owedTo)?.name || balance.owedTo,
+              itemsDetails: itemDetailsArray,
+            };
+          })
+        );
+      } catch (error) {
+        console.error('Error fetching household or balances:', error);
       }
+    });
 
-      const userId = auth.currentUser.uid;
-      const paymentData = {
-        description: paymentDescription || 'Payment recorded manually',
-        paidBy: userId,
-        amount: parseFloat(paymentAmount),
-        paidTo: payTo,
-        createdAt: serverTimestamp(),
-      };
-
-      const balanceRef = doc(db, `households/${selectedHouseholdId}/balances`, `${payTo}_${userId}`);
-      const reverseBalanceRef = doc(db, `households/${selectedHouseholdId}/balances`, `${userId}_${payTo}`);
-
-      const balanceDoc = await getDoc(balanceRef);
-      const reverseBalanceDoc = await getDoc(reverseBalanceRef);
-
-      if (balanceDoc.exists()) {
-        const newAmount = balanceDoc.data().amount - paymentData.amount;
-        if (newAmount < 0 && reverseBalanceDoc.exists()) {
-          await updateDoc(reverseBalanceRef, {
-            amount: reverseBalanceDoc.data().amount + paymentData.amount,
-          });
-        } else if (newAmount <= 0) {
-          await deleteDoc(balanceRef);
-        } else {
-          await updateDoc(balanceRef, {
-            amount: newAmount,
-          });
-        }
-      } else {
-        await setDoc(balanceRef, {
-          owedBy: payTo,
-          owedTo: userId,
-          amount: paymentData.amount,
-        });
-      }
-
-      await addDoc(collection(db, `households/${selectedHouseholdId}/transactions`), {
-        ...paymentData,
-        amount: paymentData.amount,
-      });
-
-      Alert.alert('Success', 'Payment recorded and balances updated successfully.');
-    } catch (error) {
-      console.error('Error recording payment:', error);
-      Alert.alert('Error', 'Failed to record payment.');
-    }
-  };
-
-  // Settle up a specific balance
-  const settleUp = async (owedBy, owedTo) => {
-    try {
-      if (!selectedHouseholdId) {
-        Alert.alert('Error', 'Please select a household first.');
-        return;
-      }
-
-      const balanceRef = doc(db, `households/${selectedHouseholdId}/balances`, `${owedBy}_${owedTo}`);
-      await deleteDoc(balanceRef);
-
-      Alert.alert('Success', 'Settlement recorded successfully.');
-    } catch (error) {
-      console.error('Error settling up:', error);
-      Alert.alert('Error', 'Failed to settle up.');
-    }
-  };
+    return () => unsubscribe();
+  }
+}, [selectedHouseholdId, households]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.container}>
+      {/* Header Section */}
+      <Text style={styles.title}>Household Balances</Text>
+      
+      {/* Dropdown for selecting household */}
+      <DropDownPicker
+        open={isDropdownOpen}
+        value={selectedHouseholdId}
+        items={householdItems}
+        setOpen={setIsDropdownOpen}
+        setValue={setSelectedHouseholdId}
+        setItems={setHouseholdItems}
+        placeholder="Select Household"
+        style={styles.dropdown}
+        dropDownContainerStyle={styles.dropdownContainer}
+        listMode="SCROLLVIEW"
+      />
+  
+      {/* Balances List */}
+      {selectedHouseholdId ? (
       <FlatList
         data={transactions}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.transactionCard}>
-            <Text style={styles.transactionText}>{item.description || 'No description available'}</Text>
-            <Text style={styles.paidByText}>Paid by: {item.paidByUsername || 'Unknown'}</Text>
-            <Text style={item.amount < 0 ? styles.transactionAmountNegative : styles.transactionAmountPositive}>
-              {item.amount < 0 ? '+' : '-'}${Math.abs(item.amount).toFixed(2)}
+          <View
+            style={[
+              styles.transactionCard,
+              item.owedBy === auth.currentUser.uid ? styles.splitTransaction : styles.receivedTransaction, // Red border for split, green for received
+            ]}
+          >
+            <Text style={styles.transactionDescription}>
+              {/* Display each item name and cost */}
+              {item.itemsDetails && item.itemsDetails.length > 0
+                ? item.itemsDetails.map((detail, index) => `${detail.name}: $${detail.cost}`).join(', ')
+                : 'No details available'}
+            </Text>
+            <Text style={styles.transactionPayer}>
+              Paid by: {item.owedByUsername || 'Unknown'}
+            </Text>
+            <Text style={styles.transactionPayee}>
+              Owed to: {item.owedToUsername || 'Unknown'}
+            </Text>
+            <Text
+              style={[
+                styles.transactionAmount,
+                item.owedBy === auth.currentUser.uid ? styles.negativeAmount : styles.positiveAmount, // Negative red for owed, positive green for received
+              ]}
+            >
+              {item.owedBy === auth.currentUser.uid
+                ? `-$${Math.abs(item.amount).toFixed(2)}`
+                : `+$${item.amount.toFixed(2)}`}
+            </Text>
+            <Text style={styles.transactionDate}>
+              Date: {item.createdAt ? item.createdAt.toDate().toLocaleString() : 'Unknown date'}
             </Text>
           </View>
         )}
-        ListHeaderComponent={() => (
-          <View style={styles.headerContainer}>
-            <Text style={styles.title}>Household Balances</Text>
-            <DropDownPicker
-              open={isDropdownOpen}
-              value={selectedHouseholdId}
-              items={householdItems}
-              setOpen={setIsDropdownOpen}
-              setValue={setSelectedHouseholdId}
-              setItems={setHouseholdItems}
-              placeholder="Select Household"
-              style={styles.dropdown}
-              dropDownContainerStyle={styles.dropdownContainer}
-              listMode="SCROLLVIEW"
-            />
-            {owedDetails.length > 0 && (
-              <View style={styles.owedSummary}>
-                {owedDetails.map((detail, index) => (
-                  <View key={index} style={styles.owedRow}>
-                    <Text style={styles.owedText}>
-                      {detail.owedByUsername || detail.owedBy} owes {detail.owedToUsername || detail.owedTo} ${detail.amount.toFixed(2)}
-                    </Text>
-
-                    {/* Display the item details if they exist */}
-                    {detail.itemsDetails && detail.itemsDetails.length > 0 && (
-                      <View style={styles.itemsDetailsContainer}>
-                        {detail.itemsDetails.map((itemDetail, itemIndex) => (
-                          <Text key={itemIndex} style={styles.itemDetailText}>
-                            - {itemDetail.itemName}: ${itemDetail.cost}
-                          </Text>
-                        ))}
-                      </View>
-                    )}
-
-                    <TouchableOpacity onPress={() => settleUp(detail.owedBy, detail.owedTo)}>
-                      <Text style={styles.settleUpButton}>Settle Up</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-            <Text style={styles.subtitle}>Transaction History</Text>
-          </View>
-        )}
-        ListEmptyComponent={
-          selectedHouseholdId !== '' && (
-            <Text style={styles.noTransactionsText}>No transactions available for this household.</Text>
-          )
-        }
-        contentContainerStyle={styles.container}
+        contentContainerStyle={styles.transactionContainer}
       />
+      
+          
+    
+    
+
+      
+    
+    
+      
+      ) : (
+        <Text style={styles.noHouseholdSelectedText}>Please select a household to view balances.</Text>
+      )}
+  
+      {/* Record Payment Button */}
       <TouchableOpacity style={styles.recordPaymentButton} onPress={() => setIsPaymentModalVisible(true)}>
         <Text style={styles.recordPaymentButtonText}>Record Payment</Text>
       </TouchableOpacity>
+  
+      {/* Record Payment Modal */}
       {isPaymentModalVisible && (
         <Modal visible={isPaymentModalVisible} transparent={true} animationType="slide">
           <View style={styles.modalContainer}>
@@ -291,17 +268,14 @@ export default function BalancesScreen() {
       )}
     </View>
   );
-}
-
+}  
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     paddingHorizontal: 20,
     paddingBottom: 20,
     backgroundColor: '#f5f5f5',
-  },
-  headerContainer: {
     paddingTop: 40,
-    paddingBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -309,12 +283,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#003366',
     marginBottom: 20,
-  },
-  subtitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#333',
-    marginVertical: 15,
   },
   dropdown: {
     borderColor: '#ccc',
@@ -324,6 +292,40 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     borderColor: '#ccc',
     borderRadius: 8,
+  },
+  listItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    backgroundColor: '#ffffff',
+    marginBottom: 5,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  textContainer: {
+    flexDirection: 'column',
+    flex: 1,
+    marginRight: 10,
+  },
+  itemName: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#333',
+  },
+  itemsDetailsContainer: {
+    marginTop: 5,
+  },
+  itemDetailText: {
+    fontSize: 14,
+    color: '#555',
+    marginLeft: 10,
+  },
+  noHouseholdSelectedText: {
+    fontSize: 16,
+    color: 'gray',
+    textAlign: 'center',
+    marginVertical: 30,
   },
   recordPaymentButton: {
     alignSelf: 'center',
@@ -337,84 +339,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  transactionCard: {
-    backgroundColor: '#ffffff',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  transactionText: {
-    fontSize: 18,
-    color: '#555',
-    marginBottom: 8,
-  },
-  paidByText: {
-    fontSize: 16,
-    color: '#777',
-    marginBottom: 5,
-  },
-  transactionAmountPositive: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'green',
-    marginTop: 5,
-    alignSelf: 'flex-end',
-  },
-  transactionAmountNegative: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'red',
-    marginTop: 5,
-    alignSelf: 'flex-end',
-  },
-  owedSummary: {
-    marginBottom: 20,
-  },
-  owedRow: {
-    flexDirection: 'column', // Changed to column to fit both the main owed text and item details below it
-    padding: 10,
-    marginVertical: 5,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  owedText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#333',
-  },
-  itemsDetailsContainer: {
-    marginTop: 5,
-  },
-  itemDetailText: {
-    fontSize: 14,
-    color: '#555',
-    marginLeft: 10,
-  },
-  settleUpButton: {
-    color: '#007BFF',
-    fontWeight: 'bold',
-    marginTop: 10,
-  },
-  noTransactionsText: {
-    fontSize: 16,
-    color: 'gray',
-    textAlign: 'center',
-    marginTop: 30,
   },
   modalContainer: {
     flex: 1,
@@ -442,6 +366,71 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderRadius: 5,
   },
-});
+  transactionCard: {
+    backgroundColor: '#ffffff',
+    marginBottom: 12,
+    width: '114%', // Set a narrower width, adjustable as needed
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8, // Slightly rounded corners for a more rectangular shape
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    marginBottom: 5,
+    elevation: 2,
+    borderLeftWidth: 6,
+    alignSelf: 'center',
+    borderLeftColor: '#4CAF50', // Green for positive balances, adjustable based on context
+  },
+  splitTransaction: {
+    borderLeftColor: '#d9534f', // Red color for split transactions
+  },
+  receivedTransaction: {
+    borderLeftColor: '#4CAF50', // Green color for received transactions
+  },
+  transactionDescription: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  transactionPayer: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '500',
+    marginBottom: 3,
+  },
+  transactionPayee: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '500',
+    marginBottom: 3,
+  },
+  transactionAmount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'right',
+    marginTop: 6,
+  },
+  transactionDate: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 5,
+    textAlign: 'right',
+  },
+  transactionContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  negativeAmount: {
+    color: '#d9534f', // Red color for negative values
+  },
+  positiveAmount: {
+    color: '#4CAF50',
+  },
 
+
+  
+});
 
