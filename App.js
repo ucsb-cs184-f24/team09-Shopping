@@ -11,9 +11,17 @@ import * as Font from 'expo-font';
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [fontsLoaded] = Font.useFonts({
-    Avenir: require('./assets/fonts/AvenirLTStd-Book.otf'),
-  })
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadFonts = async () => {
+      await Font.loadAsync({
+        Avenir: require('./assets/fonts/AvenirLTStd-Book.otf'),
+      });
+      setFontsLoaded(true);
+    };
+    loadFonts();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
