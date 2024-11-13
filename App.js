@@ -4,12 +4,16 @@ import { View, ActivityIndicator } from 'react-native';
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from "firebase/auth";
 import { NavigationContainer} from '@react-navigation/native';
-import AuthStack from './src/navigation/AuthStack'
-import AppStack from './src/navigation/AppStack'
+import AuthStack from './src/navigation/AuthStack';
+import AppStack from './src/navigation/AppStack';
+import * as Font from 'expo-font';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fontsLoaded] = Font.useFonts({
+    Avenir: require('./assets/fonts/AvenirLTStd-Book.otf'),
+  })
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
