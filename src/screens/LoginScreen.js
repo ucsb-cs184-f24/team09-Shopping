@@ -74,7 +74,6 @@ export default function LoginScreen({ navigation }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                     onPress={handleNavigateToRegister}
-                    style={[styles.button, styles.buttonOutline]}
                 >
                     <Text style = {styles.buttonOutlineText}>New User? Sign up here!</Text>
                 </TouchableOpacity>
@@ -86,13 +85,13 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f0f4f8',
+        backgroundColor: "#FFF",
         justifyContent: 'center',
         alignItems: 'center',
     },
     logoContainer: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 32,
     },
     logo: {
         width: 100,
@@ -103,22 +102,33 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#333',
+        fontFamily: 'Avenir',
     },
     subText: {
         fontSize: 16,
         color: '#666',
         textAlign: 'center',
         marginTop: 5,
+        fontFamily: 'Avenir',
     },
     inputContainer: {
-        width: '80%'
+        backgroundColor: "#ECECEC",
+        padding: 15,
+        borderRadius: 8,
+        marginRight: 30,
+        marginLeft: 30,
+        shadowColor: '#000000',  // Black color
+        shadowOffset: { width: 0, height: 3 },  // Position X: 0, Y: 3
+        shadowOpacity: 0.2,  // 20% opacity
+        shadowRadius: 5,  // Blur
+        gap: 10,
     },
     input: {
         backgroundColor: 'white',
         paddingHorizontal: 15,
         paddingVertical: 10,
-        borderRadius: 10,
-        marginTop: 5
+        borderRadius: 8,
+        fontFamily: 'Avenir'
     },
     passwordContainer: {
         flexDirection: 'row',
@@ -126,8 +136,7 @@ const styles = StyleSheet.create({
         width: '100%',
         borderWidth: 1,
         borderColor: '#ccc',
-        borderRadius: 4,
-        marginTop: 5,
+        borderRadius: 8,
         paddingHorizontal: 10,
         backgroundColor: 'white',
     },
@@ -135,35 +144,36 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 10,
         paddingHorizontal: 5,
+        fontFamily: 'Avenir'
     },
     buttonContainer: {
-        width: '60%',
+        padding: 15,
+        marginRight: 30,
+        marginLeft: 30,
+        width: '90%',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 40
+        marginTop: 24,
+        gap: 20,
     },
     button: {
-        backgroundColor: '#0782F9',
         width: '100%',
+        backgroundColor: '#008F7A',
         padding: 15,
         borderRadius: 10,
         alignItems: 'center'
     },
-    buttonOutline: {
-        backgroundColor: 'white',
-        marginTop: 5,
-        borderColor: '#0782F9',
-        borderWidth: 2
-    },
     buttonText: {
         color: 'white',
-        fontWeight: '700',
-        fontSize: 16
+        fontWeight: 'bold',
+        fontSize: 16,
+        fontFamily: 'Avenir',
     },
     buttonOutlineText: {
-        color: '#0782F9',
-        fontWeight: '700',
-        fontSize: 16
+        color: '#008F7A',
+        fontWeight: 'bold',
+        fontSize: 16,
+        fontFamily: 'Avenir',
     }
     
 })
