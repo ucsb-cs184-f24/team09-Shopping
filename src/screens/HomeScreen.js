@@ -232,7 +232,7 @@ export default function HomeScreen() {
     setCurrentEditItem(item);
     setNewItemName(item.itemName);
     setNewItemCategory(item.category);
-    setNewItemCost(item.cost);
+    setNewItemCost(item.cost ? item.cost.toString() : '');
     setEditModalVisible(true);
   };
 
@@ -241,7 +241,7 @@ export default function HomeScreen() {
     if (!currentEditItem) return;
     try {
       const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentEditItem.id);
-      await updateDoc(itemRef, { itemName: newItem, category: newItemCategory });
+      await updateDoc(itemRef, { itemName: newItem, category: newItemCategory, cost: newItemCost });
 
       setEditModalVisible(false);
       setNewItemName('');
@@ -254,7 +254,7 @@ export default function HomeScreen() {
   };
 
   const splitBill = () => {
-    /* if (selectedMembers.length === 0) {
+    if (selectedMembers.length === 0) {
       Alert.alert('Error', 'Please select at least one member to split the bill.');
       return;
     }
@@ -262,7 +262,7 @@ export default function HomeScreen() {
     if (selectedItems.length === 0) {
       Alert.alert('Error', 'Please select at least one item to split.');
       return;
-    } */
+    }
 
     // filter out purchased (checked off) items from 
     const unpaidItems = shoppingListItems.filter(
@@ -275,7 +275,7 @@ export default function HomeScreen() {
       0
     );
 
-    const splitAmount = totalCost / selectedMembers.length;
+    const splitAmount = totalCost / (selectedMembers.length + 1);  // split with TOTAL people in household
   
     Alert.alert('Split Amount', `Each selected member owes: $${splitAmount.toFixed(2)}`);
   
@@ -546,6 +546,12 @@ export default function HomeScreen() {
         value={newItemCategory}
         onChangeText={setNewItemCategory}
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Edit price"
+        value={newItemCost}
+        onChangeText={setNewItemCost}
+      />
       <View style={styles.buttonContainer}>
         <Button title="Save" onPress={saveEdit} />
         <View style={{ width: 15 }}/>
@@ -766,7 +772,7 @@ const styles = StyleSheet.create({
     margin: 20,
     justifyContent: 'center',
     height: '25%',
-    minHeight: 200,
+    minHeight: 275,
   },
   filterModalContent: {
     backgroundColor: '#fff',
