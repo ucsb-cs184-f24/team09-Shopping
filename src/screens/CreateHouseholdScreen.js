@@ -224,6 +224,7 @@ export default function CreateHouseholdScreen({ navigation }) {
                             style={styles.input}
                             value={householdName}
                             onChangeText={setHouseholdName}
+                            placeholder='Enter household name'
                         />
                         <View style={{ height: 20, justifyContent: 'center', alignItems: 'center' }}>
                             {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : <Text style={styles.error}></Text>}
@@ -364,11 +365,14 @@ const styles = StyleSheet.create({
     actionButtonWrapperNoHouseholds: { // No households exist
         backgroundColor: "#008F7A",
         flexDirection:'row',
-        paddingRight: 15,
-        paddingLeft: 15,
+        paddingRight: 20,
+        paddingLeft: 20,
         paddingTop: 45,
         paddingBottom: 45,
         borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        alignSelf: 'center',
     },
     actionButtonWrapper2: {
         backgroundColor: "red",
