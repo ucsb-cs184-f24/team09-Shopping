@@ -4,10 +4,11 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where} from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';https://github.com/ucsb-cs184-f24/team09-Shopping/pull/97/conflicts
 
 // TODO (COMPLETE): remove items from list of respective household when user leaves group
 // TODO (COMPLETE): do not allow split bill on checked off items
+// TODO (COMPLETE): Only allow split bill if household has more than 1 user, implement cleaner UI i.e. button padding
 
 export default function HomeScreen() {
   // Household states
@@ -297,7 +298,7 @@ export default function HomeScreen() {
       0
     );
 
-    const splitAmount = totalCost / selectedMembers.length;
+    const splitAmount = totalCost / (selectedMembers.length + 1);  // split with TOTAL people in household
   
     Alert.alert('Split Amount', `Each selected member owes: $${splitAmount.toFixed(2)}`);
   
@@ -329,7 +330,7 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
         <Text style={styles.householdButtonText}>Select Household</Text>
       </TouchableOpacity>
-            
+      
       <TextInput
         style={styles.input}
         placeholder="Add a new item..."
@@ -410,7 +411,17 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={styles.splitButton}
-        onPress={() => setSplitMembersModalVisible(true)}  // Update here to use the member modal state
+        onPress={() => {
+          if (!selectedHouseholdID) {
+            Alert.alert('Error', 'Please choose a household.');
+          } else if (shoppingListItems.length === 0) {
+            Alert.alert('Error', 'There are no items in the list for this household.');
+          } else if (householdMembers.length <= 1) {
+            Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
+          } else {
+            setSplitMembersModalVisible(true); // only open Split Bill modal if there are other members to split with
+          }
+        }}
       >
         <Text style={styles.splitButtonText}>Split the Bill</Text>
       </TouchableOpacity>
@@ -425,13 +436,13 @@ export default function HomeScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.splitModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Members to Split the Bill</Text>
-
+              <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
+              
               <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
             </View>
 
             <FlatList
-              data={householdMembers}
+              data={householdMembers.filter(member => member.uid !== auth.currentUser.uid)} // exclude current user so cannot split with themselves
               keyExtractor={(item) => item.uid} // Use `uid` as the key
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -677,6 +688,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingTop: 40,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    padding: 10,
+    marginTop: 10,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -755,23 +772,43 @@ const styles = StyleSheet.create({
     margin: 20,
     justifyContent: 'center',
     height: '30%',
+    minHeight: 275,
   },
   filterModalContent: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 10,
-    margin: 20,
     height: '38%',
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5, // Android shadow
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    paddingTop: 10,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  closeButtonContainer: {
+    paddingLeft: 10,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#f9f9f9',
+    paddingHorizontal: 5,
+    marginTop: 10,
   },
   picker: {
     height: 150,
@@ -823,9 +860,22 @@ const styles = StyleSheet.create({
   splitModalContent: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 10,
-    margin: 20,
-    height: '60%',
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 10,
+    minHeight: '50%',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4, // shadow for IOS
+    elevation: 5, // shadow for android
+  },
+  noHouseholdsText: {
+    fontSize: 16,
+    color: '#777',
+    textAlign: 'center',
+    marginTop: 10,
   },
   modalButtonContainer: {
     flexDirection: 'row',
@@ -856,5 +906,4 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  
 });

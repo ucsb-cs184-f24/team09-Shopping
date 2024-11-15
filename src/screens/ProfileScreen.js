@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Modal, Button, View, Text, TextInput, Alert, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, Button, View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
 import { getAuth, deleteUser, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { deleteDoc, doc, getDoc, setDoc, getFirestore, collection, query, where, getDocs, updateDoc, arrayRemove } from 'firebase/firestore';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
@@ -25,6 +26,7 @@ export default function ProfileScreen() {
   const [creationDate, setCreationDate] = useState(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [confirmationText, setConfirmationText] = useState('');
+  const [image, setImage] = useState(null);
 
   // Fetch user data from Firestore
   const fetchUserData = async () => {
@@ -256,9 +258,42 @@ export default function ProfileScreen() {
     </View>
   );
 
+  const addImage = async () => {
+    let _image = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4,3],
+      quality: 1,
+    });
+    console.log(JSON.stringify(_image));
+    if (!_image.canceled) {
+      setImage(_image.assets[0].uri);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.title}>Profile</Text> */}
+      <View style={styles.screenHeader}>
+        <Text style={styles.title}>My Profile</Text>
+      </View>
+
+      <View style={styles.imageContainer}>
+        {
+          image && <Image source={{ uri: image }} style={{ width: 150, height: 150 }} />
+        }
+          <View style={styles.uploadBtnContainer}>
+            <TouchableOpacity onPress={addImage} style={styles.uploadBtn} >
+              <Text style={styles.uploadImageText}>{image ? 'Edit' : 'Upload'}</Text>
+              <Ionicons name="camera-outline" size={20} color="black" />
+            </TouchableOpacity>
+          </View>
+      </View>
+
+      <View>
+        <View style={styles.nameContainer}>
+          <Text style={styles.name}>{name}</Text>
+        </View>
+      </View>
 
       {/* Display user's email in the same format as other fields */}
       <View style={styles.fieldContainer}>
@@ -368,16 +403,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
+  screenHeader: {
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
+  imageContainer: {
+    elevation:2,
+    height:150,
+    width:150,
+    backgroundColor:'#efefef',
+    position:'relative',
+    borderRadius:999,
+    overflow:'hidden',
+    marginBottom: 18,
+  },
+  uploadBtnContainer:{
+    gap: 1,
+    opacity:0.7,
+    position:'absolute',
+    bottom:0,
+    backgroundColor:'lightgrey',
+    width:'100%',
+    height:'25%',
+  },
+  uploadBtn:{
+    display:'flex',
+    alignItems:"center",
+    justifyContent:'center'
+  },
+  uploadImageText: {
+    fontFamily: 'Avenir'
+  },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 40,
-    marginBottom: 16,
+    marginTop: 80,
+    // marginLeft: 20,
+    fontFamily: "Avenir",
+    opacity: 0.5,
   },
   info: {
     fontSize: 16,
     marginBottom: 12,
     textAlign: 'left',
+  },
+  nameContainer: {
+    marginBottom: 16,
+  },
+  name: {
+    fontSize: 18,
+    fontFamily: 'Avenir',
+    fontWeight: 'bold'
   },
   input: {
     width: '100%',
@@ -458,7 +533,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   creationDateContainer: {
-    marginTop: 250,
+    marginTop: 24,
     alignItems: 'center',
   },
   creationDateText: {
