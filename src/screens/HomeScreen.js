@@ -4,7 +4,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where} from 'firebase/firestore'; 
 import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
-import { Ionicons } from '@expo/vector-icons';https://github.com/ucsb-cs184-f24/team09-Shopping/pull/97/conflicts
+import { Ionicons } from '@expo/vector-icons';
 
 // TODO (COMPLETE): remove items from list of respective household when user leaves group
 // TODO (COMPLETE): do not allow split bill on checked off items
