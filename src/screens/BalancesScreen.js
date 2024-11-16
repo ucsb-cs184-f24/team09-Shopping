@@ -85,12 +85,12 @@ export default function BalancesScreen() {
 
   const calculateNetBalances = async (balancesData) => {
     const netBalanceMap = {};
-
+  
     // Fetch household members details to get usernames
     const householdDocRef = doc(db, 'households', selectedHouseholdId);
     const householdDoc = await getDoc(householdDocRef);
     const members = householdDoc.data().members;
-
+  
     const membersInfo = await Promise.all(
       members.map(async (uid) => {
         try {
@@ -105,44 +105,53 @@ export default function BalancesScreen() {
         return null;
       })
     );
-
+  
     const householdMembers = membersInfo.filter(info => info !== null);
-
+  
+    // Calculate raw net balances
     balancesData.forEach((balance) => {
       const { owedBy, owedTo, amount } = balance;
-
+  
       if (!netBalanceMap[owedBy]) netBalanceMap[owedBy] = {};
       if (!netBalanceMap[owedTo]) netBalanceMap[owedTo] = {};
-
-
-      // Owed by owedBy to owedTo
-
+  
       if (!netBalanceMap[owedBy][owedTo]) {
         netBalanceMap[owedBy][owedTo] = 0;
       }
       netBalanceMap[owedBy][owedTo] += amount;
     });
-
   
+    // Adjust balances to account for mutual debts
     const netBalancesList = [];
     for (const owedBy in netBalanceMap) {
       for (const owedTo in netBalanceMap[owedBy]) {
         if (netBalanceMap[owedBy][owedTo] > 0) {
-          netBalancesList.push({
-            owedBy,
-            owedTo,
-            owedByUsername:
-              householdMembers.find((member) => member.uid === owedBy)?.name || owedBy,
-            owedToUsername:
-              householdMembers.find((member) => member.uid === owedTo)?.name || owedTo,
-            amount: netBalanceMap[owedBy][owedTo],
-          });
+          const mutualAmount = netBalanceMap[owedTo]?.[owedBy] || 0;
+          const finalAmount = netBalanceMap[owedBy][owedTo] - mutualAmount;
+  
+          if (finalAmount > 0) {
+            netBalancesList.push({
+              owedBy,
+              owedTo,
+              owedByUsername:
+                householdMembers.find((member) => member.uid === owedBy)?.name || owedBy,
+              owedToUsername:
+                householdMembers.find((member) => member.uid === owedTo)?.name || owedTo,
+              amount: finalAmount,
+            });
+          }
+  
+          // Mark the opposing debt as settled
+          if (netBalanceMap[owedTo]) {
+            netBalanceMap[owedTo][owedBy] = 0;
+          }
         }
       }
     }
-
+  
     setNetBalances(netBalancesList);
   };
+  
 
   
   // Fetch balance details whenever selected household changes
