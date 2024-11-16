@@ -5,7 +5,7 @@ import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, quer
 import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
-import { updateBalancesAfterSplit } from './BalancesScreen'; // Import the Firestore update function
+import { updateBalancesAfterSplit } from './BalancesScreen'; 
 
 
 // TODO (COMPLETE): remove items from list of respective household when user leaves group
@@ -48,8 +48,6 @@ export default function HomeScreen() {
 
   const [currentItemForCost, setCurrentItemForCost] = useState(null);
   const [inputCost, setInputCost] = useState('');
-  
-
 
   // Split bill states
   const [selectedMembers, setSelectedMembers] = useState([]); // Array of strings of household members IDs
@@ -83,17 +81,39 @@ export default function HomeScreen() {
     return () => unsubscribe();
   }, []);
   
-  const selectHousehold = (householdId) => {
-    setSelectedHouseholdID(householdId);
-    
-    // Find the name of the selected household
-    const household = households.find(h => h.id === householdId);
-    if (household) {
-      setSelectedHouseholdName(household.displayHouseholdName || 'Unnamed Household');
-    }
 
+
+  // Select household by updating householdId
+  const selectHousehold = (householdId) => {
+    if (householdId && households.some(h => h.id === householdId)) {
+      setSelectedHouseholdID(householdId);
+    } else {
+      setSelectedHouseholdID('');
+      setShoppingListMeta(null);
+      setShoppingListItems([]);
+    }
     setHouseholdModalVisible(false);
   };
+  // Listen for changes in shopping list meta data
+  useEffect(() => {
+    if (!selectedHouseholdID) {
+      setShoppingListMeta(null);
+      return;
+    }
+    const q = collection(db, `households/${selectedHouseholdID}/shoppingLists`);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const shoppingLists = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      // Get first shopping list metadata (shoppingLists[0])
+      const defaultShoppingListMeta = shoppingLists[0];
+      setShoppingListMeta(defaultShoppingListMeta);
+    });
+    return () => unsubscribe();
+  }, [selectedHouseholdID]);
+
+
 
   // Listen for changes in shopping list meta data
   useEffect(() => {
@@ -101,24 +121,23 @@ export default function HomeScreen() {
       setShoppingListMeta(null);
       return;
     }
-
     const q = collection(db, `households/${selectedHouseholdID}/shoppingLists`);
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const shoppingLists = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-
       // Get first shopping list metadata (shoppingLists[0])
       const defaultShoppingListMeta = shoppingLists[0];
       setShoppingListMeta(defaultShoppingListMeta);
     });
-
     return () => unsubscribe();
   }, [selectedHouseholdID]);
 
+
+
   // Listen for changes in items of shopping list
-  useEffect(() => {
+useEffect(() => {
     if (!selectedHouseholdID || !shoppingListMeta) {
       setShoppingListItems([]);
       setCategories([]);
@@ -142,7 +161,8 @@ export default function HomeScreen() {
     });
   
     return () => unsubscribe();
-  }, [shoppingListMeta]);
+  }, [selectedHouseholdID, shoppingListMeta]);
+
 
   
   // Filter the shopping list based on the selected category
@@ -201,38 +221,84 @@ export default function HomeScreen() {
 
     fetchHouseholdMembers();
   }, [selectedHouseholdID]);
+
+
+
+    // Fetch members if selected household changes
+    useEffect(() => {
+      const fetchHouseholdMembers = async () => {
+        if (!selectedHouseholdID) {
+          setHouseholdMembers([]);
+          return;
+        }
+        try {
+          const householdDocRef = doc(db, 'households', selectedHouseholdID);
+          const householdDoc = await getDoc(householdDocRef);
+          const members = householdDoc.data().members;
+          const membersInfo = await Promise.all(
+            members.map(async (uid) => {
+              try {
+                const userDocRef = doc(db, 'users', uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                  return { uid, name: userDoc.data().name };
+                }
+                else {
+                  console.warn(`No user found with UID: ${uid}`);
+                }
+              } catch (error) {
+                console.error(`Failed to fetch user with UID: ${uid}`, error);
+              }
+              return null;
+            })
+          );
+          setHouseholdMembers(membersInfo.filter(info => info !== null));
+        } catch (error) {
+          console.error("Error fetching household:", error);
+        }
+      };
+      fetchHouseholdMembers();
+    }, [selectedHouseholdID]);
+
+
   
   // Add a new item to Firestore
-  const addItemToList = async () => {
-    if (newItemName.trim() === '' || newItemCategory.trim() === '') {
-      Alert.alert('Error', 'Please enter an item, its category, and cost');
-      return;
-    }
-  
-    const newItemObj = {
-      itemName: newItemName,
-      category: newItemCategory,
-      cost: newItemCost ? parseFloat(newItemCost) : 0,
-      addedBy: auth.currentUser.email,
-      isPurchased: false,
-      addedDate: new Date(),
-    };
-  
-    try {
-      const itemsRef = collection(
-        db,
-        `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
-      );
-      await addDoc(itemsRef, newItemObj);
-  
-      setNewItemName('');
-      setNewItemCategory('');
-      setNewItemCost('');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add item. Please try again.');
-      console.error(error);
-    }
-  };  
+const addItemToList = async () => {
+  if (!selectedHouseholdID || !shoppingListMeta) {
+    Alert.alert('Error', 'Please select a household with an active shopping list before adding items.');
+    return;
+  }
+
+  if (newItemName.trim() === '' || newItemCategory.trim() === '') {
+    Alert.alert('Error', 'Please enter an item name and its category');
+    return;
+  }
+
+  const newItemObj = {
+    itemName: newItemName,
+    category: newItemCategory,
+    cost: newItemCost ? parseFloat(newItemCost) : 0,
+    addedBy: auth.currentUser.email,
+    isPurchased: false,
+    addedDate: new Date(),
+  };
+
+  try {
+    const itemsRef = collection(
+      db,
+      `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
+    );
+    await addDoc(itemsRef, newItemObj);
+
+    setNewItemName('');
+    setNewItemCategory('');
+    setNewItemCost('');
+  } catch (error) {
+    Alert.alert('Error', 'Failed to add item. Please try again.');
+    console.error(error);
+  }
+};
+
   
   // Delete an item
   const deleteItem = async (itemId) => {
@@ -254,11 +320,9 @@ export default function HomeScreen() {
   // Open edit modal
   const openEditModal = (item) => {
     setCurrentEditItem(item);
-
     setEditItemName(item.itemName);
     setEditItemCategory(item.category);
     setEditItemCost(item.cost ? item.cost.toString() : '');
-
     setEditModalVisible(true);
   };
 
@@ -280,7 +344,8 @@ export default function HomeScreen() {
     }
   };
 
-  
+
+
   const splitBill = async () => {
     if (selectedMembers.length === 0) {
       Alert.alert('Error', 'Please select at least one member to split the bill.');
@@ -292,32 +357,40 @@ export default function HomeScreen() {
       return;
     }
   
-
+    console.log('Selected Items for Splitting:', selectedItems);
   
     let totalCost = 0;
   
     // Use full item objects to calculate total cost
     selectedItems.forEach((item) => {
       const itemCost = item.cost !== undefined ? parseFloat(item.cost) : 0;
+      console.log(`Item: ${item.itemName || item.id}, Cost: ${itemCost}`);
       totalCost += itemCost;
     });
   
-    const splitAmount = parseFloat((totalCost / selectedMembers.length + 1).toFixed(2));
-
+    console.log('Total Cost:', totalCost);
+    const splitAmount = parseFloat((totalCost / (selectedMembers.length + 1)).toFixed(2));
+    console.log('Split Amount:', splitAmount);
   
     Alert.alert('Split Amount', `Each selected member owes: $${splitAmount.toFixed(2)}`);
   
-
     try {
       await updateBalancesAfterSplit(selectedHouseholdID, selectedMembers, splitAmount, selectedItems);
+  
+      // Remove split items from the list after they are split
       for (const item of selectedItems) {
         await deleteItem(item.id);
       }
+  
+      // Clear selected items and members after split to prevent them from being reused
+      setSelectedItems([]);
+      setSelectedMembers([]);
     } catch (error) {
+      console.error('Error updating balances:', error);
       Alert.alert('Error', 'Failed to record the split.');
     }
-
   };
+  
   
   
   const toggleItemSelection = (item) => {
@@ -332,8 +405,8 @@ export default function HomeScreen() {
       }
     });
   };
-  
-  
+
+  // Function to toggle the purchased status of an item
   const togglePurchased = async (itemId, currentStatus, item) => {
     if (!currentStatus) {
       setCurrentItemForCost(item);
@@ -341,17 +414,26 @@ export default function HomeScreen() {
     } else {
       try {
         const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
-        await updateDoc(itemRef, { isPurchased: !currentStatus, cost: item.cost ? parseFloat(item.cost) : 0 });
+        await updateDoc(itemRef, { isPurchased: !currentStatus });
       } catch (error) {
         Alert.alert('Error', 'Failed to update item status. Please try again.');
         console.error(error);
       }
     }
-  };
-  
-  
 
+    const selectHousehold = (householdId) => {
+      setSelectedHouseholdID(householdId);
+      
+      // Find the name of the selected household
+      const household = households.find(h => h.id === householdId);
+      if (household) {
+        setSelectedHouseholdName(household.displayHouseholdName || 'Unnamed Household');
+      }
   
+      setHouseholdModalVisible(false);
+    };
+  
+  };
 
   return (
     <View style={styles.container}>
@@ -530,7 +612,7 @@ export default function HomeScreen() {
 
             {/* Display list of items */}
             <FlatList
-              data={shoppingListItems.filter((item) => !item.isPurchased)} // exclude checked off items
+              data={shoppingListItems.filter((item) => item.isPurchased)} // exclude checked off items
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -545,7 +627,7 @@ export default function HomeScreen() {
                       prevSelected.includes(item.id)
                         ? prevSelected.filter(i => i !== item.id)
                         : [...prevSelected, item.id]
-                    );
+                    ), toggleItemSelection(item);
                   }}
                 >
                   <Text style={{ color: selectedItems.includes(item.id) ? '#fff' : '#000' }}>

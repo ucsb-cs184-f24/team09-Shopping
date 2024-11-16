@@ -3,7 +3,6 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Modal, TextI
 import DropDownPicker from 'react-native-dropdown-picker';
 import { collection, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
-
 // Function to update balances after splitting the bill
 export const updateBalancesAfterSplit = async (selectedHouseholdID, selectedMembers, splitAmount, itemsDetails) => {
   try {
@@ -26,8 +25,6 @@ export const updateBalancesAfterSplit = async (selectedHouseholdID, selectedMemb
     throw new Error('Failed to update balances after split');
   }
 };
-
-
 // Main BalancesScreen component
 export default function BalancesScreen() {
   const [households, setHouseholds] = useState([]);
@@ -43,9 +40,6 @@ export default function BalancesScreen() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [balances, setBalances] = useState([]);
     const [netBalances, setNetBalances] = useState([]);
-
-
-
   useEffect(() => {
     if (selectedHouseholdId) {
       const balancesRef = collection(db, `households/${selectedHouseholdId}/balances`);
@@ -62,8 +56,6 @@ export default function BalancesScreen() {
     }
   }, [selectedHouseholdId]);
   
-
-
   // Fetch households associated with the user
   useEffect(() => {
     const fetchHouseholds = async () => {
@@ -76,8 +68,8 @@ export default function BalancesScreen() {
             ...doc.data(),
           }));
           setHouseholds(userHouseholds);
-          setHouseholdItems(userHouseholds.map((household) => ({
-            label: household.displayHouseholdName || 'Unnamed Household',
+          setHouseholdItems( userHouseholds.map((household) => ({
+            label: household.displayHouseholdName ? household.displayHouseholdName : `Household ${household.id.substring(0, 6)}`, // Assign a default name dynamically if the label is not available
             value: household.id,
           })));
         });
@@ -86,7 +78,6 @@ export default function BalancesScreen() {
         console.error('Error fetching households:', error);
       }
     };
-
     fetchHouseholds();
   }, []);
 
@@ -94,12 +85,12 @@ export default function BalancesScreen() {
 
   const calculateNetBalances = async (balancesData) => {
     const netBalanceMap = {};
-    
+
     // Fetch household members details to get usernames
     const householdDocRef = doc(db, 'households', selectedHouseholdId);
     const householdDoc = await getDoc(householdDocRef);
     const members = householdDoc.data().members;
-  
+
     const membersInfo = await Promise.all(
       members.map(async (uid) => {
         try {
@@ -114,20 +105,24 @@ export default function BalancesScreen() {
         return null;
       })
     );
-  
+
     const householdMembers = membersInfo.filter(info => info !== null);
-  
+
     balancesData.forEach((balance) => {
       const { owedBy, owedTo, amount } = balance;
-  
+
       if (!netBalanceMap[owedBy]) netBalanceMap[owedBy] = {};
       if (!netBalanceMap[owedTo]) netBalanceMap[owedTo] = {};
-  
+
+
+      // Owed by owedBy to owedTo
+
       if (!netBalanceMap[owedBy][owedTo]) {
         netBalanceMap[owedBy][owedTo] = 0;
       }
       netBalanceMap[owedBy][owedTo] += amount;
     });
+
   
     const netBalancesList = [];
     for (const owedBy in netBalanceMap) {
@@ -145,80 +140,81 @@ export default function BalancesScreen() {
         }
       }
     }
-  
+
     setNetBalances(netBalancesList);
   };
+
   
   // Fetch balance details whenever selected household changes
-// Fetch balance details whenever selected household changes
-useEffect(() => {
-  if (selectedHouseholdId) {
-    const balancesRef = query(
-      collection(db, `households/${selectedHouseholdId}/balances`),
-      orderBy('createdAt', 'desc') // Order by createdAt field in descending order (newest first)
-    );
-    const unsubscribe = onSnapshot(balancesRef, async (balancesSnapshot) => {
-      try {
-        // Fetch household members details to get usernames
-        const householdDocRef = doc(db, 'households', selectedHouseholdId);
-        const householdDoc = await getDoc(householdDocRef);
-        const members = householdDoc.data().members;
 
-        const membersInfo = await Promise.all(
-          members.map(async (uid) => {
-            try {
-              const userDocRef = doc(db, 'users', uid);
-              const userDoc = await getDoc(userDocRef);
-              if (userDoc.exists()) {
-                return { uid, name: userDoc.data().name };
+
+
+
+
+
+  useEffect(() => {
+    if (selectedHouseholdId) {
+      const balancesRef = query(
+        collection(db, `households/${selectedHouseholdId}/balances`),
+        orderBy('createdAt', 'desc')
+      );
+      const unsubscribe = onSnapshot(balancesRef, async (balancesSnapshot) => {
+        try {
+          // Fetch household members details to get usernames
+          const householdDocRef = doc(db, 'households', selectedHouseholdId);
+          const householdDoc = await getDoc(householdDocRef);
+          const members = householdDoc.data().members;
+          const membersInfo = await Promise.all(
+            members.map(async (uid) => {
+              try {
+                const userDocRef = doc(db, 'users', uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                  return { uid, name: userDoc.data().name };
+                }
+              } catch (error) {
+                console.error(`Failed to fetch user with UID: ${uid}`, error);
               }
-            } catch (error) {
-              console.error(`Failed to fetch user with UID: ${uid}`, error);
-            }
-            return null;
-          })
-        );
-
-        const householdMembers = membersInfo.filter(info => info !== null);
-
-        // Map balances to include owedByUsername and owedToUsername
-        const balancesData = balancesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setTransactions(
-          balancesData.map((balance) => {
-            // Map through itemsDetails to extract item name and cost
+              return null;
+            })
+          );
+          const householdMembers = membersInfo.filter(info => info !== null);
+          
+          // Map each item separately to create individual split transactions
+          const balancesData = balancesSnapshot.docs.flatMap((doc) => {
+            const balance = doc.data();
             const itemDetailsArray = balance.itemsDetails && Array.isArray(balance.itemsDetails)
-              ? balance.itemsDetails.map((item) => ({
-                  name: item.itemName || 'Unnamed Item',
-                  cost: item.cost || 0, // Use `amount` or `cost`
-                }))
+              ? balance.itemsDetails.filter(item => item.itemName && item.cost > 0) // Only include valid items
               : [];
-
-            return {
-              ...balance,
+  
+            return itemDetailsArray.map((item) => ({
+              id: `${doc.id}-${item.itemName}`, // Create a unique id for each item transaction
+              owedBy: balance.owedBy,
+              owedTo: balance.owedTo,
               owedByUsername:
                 householdMembers.find((member) => member.uid === balance.owedBy)?.name || balance.owedBy,
               owedToUsername:
                 householdMembers.find((member) => member.uid === balance.owedTo)?.name || balance.owedTo,
-              itemsDetails: itemDetailsArray,
-            };
-          })
-        );
-      } catch (error) {
-        console.error('Error fetching household or balances:', error);
-      }
-    });
+              itemName: item.itemName,
+              amount: item.cost,
+              createdAt: balance.createdAt,
+            }));
+          });
+  
+          // Filter out duplicate transactions based on ID
+          const uniqueBalances = Array.from(new Map(balancesData.map((item) => [item.id, item])).values());
+  
+          setTransactions(uniqueBalances);
+        } catch (error) {
+          console.error('Error fetching household or balances:', error);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [selectedHouseholdId, households]);
+  
 
-    return () => unsubscribe();
-  }
-}, [selectedHouseholdId, households]);
-
-
-
-
+  
 
 
 
@@ -243,7 +239,6 @@ useEffect(() => {
         listMode="SCROLLVIEW"
       />
 
-
         {netBalances.length > 0 && (
           <View style={styles.netBalancesContainer}>
             {netBalances.map((balance, index) => (
@@ -254,54 +249,53 @@ useEffect(() => {
           </View>
         )}
 
+
       {/* Balances List */}
       {selectedHouseholdId ? (
       <FlatList
-        data={transactions}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View
+      data={transactions}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <View
+          style={[
+            styles.transactionCard,
+            item.owedBy === auth.currentUser.uid ? styles.splitTransaction : styles.receivedTransaction,
+          ]}
+        >
+          <Text style={styles.transactionDescription}>
+            {item.itemName ? `${item.itemName}: $${item.amount}` : 'No details available'}
+          </Text>
+          <Text style={styles.transactionPayer}>
+            Paid by: {item.owedByUsername || 'Unknown'}
+          </Text>
+          <Text style={styles.transactionPayee}>
+            Owed to: {item.owedToUsername || 'Unknown'}
+          </Text>
+          <Text
             style={[
-              styles.transactionCard,
-              item.owedBy === auth.currentUser.uid ? styles.splitTransaction : styles.receivedTransaction, // Red border for split, green for received
+              styles.transactionAmount,
+              item.owedBy === auth.currentUser.uid ? styles.negativeAmount : styles.positiveAmount,
             ]}
           >
-            <Text style={styles.transactionDescription}>
-              {/* Display each item name and cost */}
-              {item.itemsDetails && item.itemsDetails.length > 0
-                ? item.itemsDetails.map((detail, index) => `${detail.name}: $${detail.cost}`).join(', ')
-                : 'No details available'}
-            </Text>
-            <Text style={styles.transactionPayer}>
-              Paid by: {item.owedByUsername || 'Unknown'}
-            </Text>
-            <Text style={styles.transactionPayee}>
-              Owed to: {item.owedToUsername || 'Unknown'}
-            </Text>
-            <Text
-              style={[
-                styles.transactionAmount,
-                item.owedBy === auth.currentUser.uid ? styles.negativeAmount : styles.positiveAmount, // Negative red for owed, positive green for received
-              ]}
-            >
-              {item.owedBy === auth.currentUser.uid
-                ? `-$${Math.abs(item.amount).toFixed(2)}`
-                : `+$${item.amount.toFixed(2)}`}
-            </Text>
-            <Text style={styles.transactionDate}>
-              Date: {item.createdAt 
-                ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}` 
-                : 'Unknown date'}
-            </Text>
-          </View>
-        )}
-        contentContainerStyle={styles.transactionContainer}
-      />
-      
+            {item.amount !== undefined && !isNaN(item.amount)
+              ? item.owedBy === auth.currentUser.uid
+                ? `-$${Math.abs(parseFloat(item.amount)).toFixed(2)}`
+                : `+$${parseFloat(item.amount).toFixed(2)}`
+              : '$0.00'}
+          </Text>
+          <Text style={styles.transactionDate}>
+            Date: {item.createdAt 
+              ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}` 
+              : 'Unknown date'}
+          </Text>
+        </View>
+      )}
+      contentContainerStyle={styles.transactionContainer}
+    />
+    
           
     
     
-
       
     
     
@@ -529,8 +523,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 5,
   },
-
-
   
 });
-
