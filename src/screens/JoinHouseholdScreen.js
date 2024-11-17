@@ -4,7 +4,8 @@ import { collection, query, where, getDocs, updateDoc, arrayUnion, getDoc, doc }
 import { db, auth } from '../../firebaseConfig';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+//import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, Camera } from 'expo-camera';
 
 // TODO (COMPLETE): change formatting of button for better UI
 
@@ -16,11 +17,11 @@ export default function JoinHouseholdScreen({ navigation }) {
     const [scannerVisible, setScannerVisible] = useState(false);
 
     useEffect(() => {
-        const requestPermission = async () => {
-            const { status } = await BarCodeScanner.requestPermissionsAsync();
+        const getCameraPermissions = async () => {
+            const { status } = await Camera.requestCameraPermissionsAsync();
             setHasPermission(status === 'granted');
         };
-        requestPermission();
+        getCameraPermissions();
     }, []);
 
     useFocusEffect(
@@ -161,8 +162,11 @@ export default function JoinHouseholdScreen({ navigation }) {
                     ) : hasPermission === false ? (
                         <Text>No access to camera</Text>
                     ) : (
-                        <BarCodeScanner
+                        <CameraView
                             onBarCodeScanned={handleBarCodeScanned}
+                            barcodeScannerSettings={{
+                                barcodeTypes: ["qr", "pdf417"],
+                            }}
                             style={StyleSheet.absoluteFillObject}
                         />
                     )}

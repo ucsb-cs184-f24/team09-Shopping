@@ -4,6 +4,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import { Ionicons } from 'react-native-vector-icons';
 import HouseholdStack from './HouseholdStack';
+import BalancesScreen from '../screens/BalancesScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -46,6 +47,7 @@ export default function App() {
                     headerShown: false,
                     tabBarLabel: 'Home' // Set the tab title here
                 }}   />
+            <Tab.Screen name="Balances" component={BalancesScreen} options={{title: 'Balances'}} />
             <Tab.Screen name="Profile" component={ProfileScreen}
                 options={{ 
                     headerShown: false,
