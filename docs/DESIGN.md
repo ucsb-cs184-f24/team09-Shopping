@@ -55,6 +55,12 @@ link](https://github.com/ucsb-cs184-f24/team09-Shopping/tree/main/team)
 ### UI
 - **Simplicity**: The UI is designed to make navigation intuitive, with clear buttons and minimal forms.
 
+<img width="570" alt="Screenshot 2024-11-17 at 8 21 25 PM" src="https://github.com/user-attachments/assets/f109c0ca-be33-4073-bfea-512d8fb9c86a">
+
+
+<img width="563" alt="Screenshot 2024-11-17 at 8 21 38 PM" src="https://github.com/user-attachments/assets/bdba2316-7898-4ce0-a1bc-5284f6a54673">
+
+
 ## 4. Design and Process Documentation Overlap
 
 - **Household Management**: Components like **CreateHouseholdScreen.js** and **JoinHouseholdScreen.js** were developed with both UX and process flow in mind, ensuring seamless onboarding.
