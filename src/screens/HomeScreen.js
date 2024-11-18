@@ -471,6 +471,7 @@ const addItemToList = async () => {
       <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
         <Text style={styles.filterButtonText}>Filter</Text>
       </TouchableOpacity>
+      
           
       <FlatList
         data={filteredShoppingListItems}
@@ -587,7 +588,6 @@ const addItemToList = async () => {
                 if (selectedMembers.length === 0) {
                   Alert.alert('Error', 'Please select at least one member.');
                 } else {
-                  setSplitMembersModalVisible(false);
                   setSplitItemsModalVisible(true);  // Correctly set the visibility of the items modal
                 }
               }}

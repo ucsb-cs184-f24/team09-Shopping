@@ -22,6 +22,8 @@ export default function App() {
                     iconName = 'home';
                 } else if (route.name ==='Profile') {
                     iconName = 'person-circle'
+                } else if (route.name == 'Balances'){
+                    iconName = 'wallet-outline'
                 }
 
                 return <Ionicons name={iconName} size={size} color={color} />;
