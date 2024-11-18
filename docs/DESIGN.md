@@ -47,15 +47,13 @@ link](https://github.com/ucsb-cs184-f24/team09-Shopping/tree/main/team)
   - Users start at **LoginScreen.js** and either sign in or navigate to **RegisterScreen.js** for account creation.
 - **Household Management**:
   - Users can create a household via **CreateHouseholdScreen.js** or join an existing one using **JoinHouseholdScreen.js**.
-  - Once part of a household, users are directed to the **HouseholdDetailsScreen.js** to view members and shared shopping lists.
+  - Once part of a household, users can view members in the household via **HouseholdDetailsScreen.js**.
 - **Shopping and Expense Tracking**:
   - Users access **HomeScreen.js** to manage household shopping lists, add new items, and filter or edit items.
   - After shopping, expenses can be split via **BalancesScreen.js**, which ensures fair cost sharing.
 
 ### UI
 - **Simplicity**: The UI is designed to make navigation intuitive, with clear buttons and minimal forms.
-- **Accessibility**: Color contrast and button sizes are chosen to cater to a broad range of users.
-- **User Guidance**: The user is guided through each flow step-by-step, such as signing up, joining a household, or adding items.
 
 ## 4. Design and Process Documentation Overlap
 
