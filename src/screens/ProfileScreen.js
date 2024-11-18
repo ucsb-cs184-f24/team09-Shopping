@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Modal, Button, View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
 import { getAuth, deleteUser, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { deleteDoc, doc, getDoc, setDoc, getFirestore, collection, query, where, getDocs, updateDoc, arrayRemove } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
@@ -278,16 +278,19 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.imageContainer}>
-        {
-          image && <Image source={{ uri: image }} style={{ width: 150, height: 150 }} />
-        }
-          <View style={styles.uploadBtnContainer}>
-            <TouchableOpacity onPress={addImage} style={styles.uploadBtn} >
-              <Text style={styles.uploadImageText}>{image ? 'Edit' : 'Upload'}</Text>
-              <Ionicons name="camera-outline" size={20} color="black" />
-            </TouchableOpacity>
-          </View>
+        {image ? (
+          <Image source={{ uri: image }} style={{ width: 150, height: 150 }} />
+        ) : (
+          <MaterialCommunityIcons name="account" size={150} color="black" />
+        )}
+        <View style={styles.uploadBtnContainer}>
+          <TouchableOpacity onPress={addImage} style={styles.uploadBtn}>
+            <Text style={styles.uploadImageText}>{image ? 'Edit' : 'Upload'}</Text>
+            <Ionicons name="camera-outline" size={20} color="black" />
+          </TouchableOpacity>
+        </View>
       </View>
+
 
       <View>
         <View style={styles.nameContainer}>
