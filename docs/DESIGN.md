@@ -8,9 +8,15 @@
 Our project is built on **React Native** for the frontend with Firebase services providing backend functionalities. The architecture is composed of:
 
 - **Frontend**: React Native components that handle UI, interactions, and navigation between screens.
-- **Backend**: Firebase services such as **Firestore** (for database), **Firebase Authentication** (for user authentication), and **Cloud Storage** (for user data).
+- **Backend**: The backend uses Firebase for authentication, database management, and real-time syncing. It handles user sign-up, household management, shopping lists, and expense tracking using Firebase Authentication and Firestore.
 - **Database**: Firestore is used for storing users, households, shopping lists, and balances, ensuring real-time data sync.
-- **Navigation**: React Navigation handles in-app navigation between different screens.
+
+![IMG_0454](https://github.com/user-attachments/assets/2885d08a-70bd-4325-a2fb-7a7925bdc00c)
+![IMG_0455](https://github.com/user-attachments/assets/3e38ae89-0dbb-46ec-b480-d28d23c61ff3)
+
+
+
+
 
 The application consists of various components:
 1. **Authentication Flow**:
@@ -32,9 +38,9 @@ The application consists of various components:
 - Agreed to use QR codes for easy household joining. Implemented in **JoinHouseholdScreen.js**.
 - Updated UI to improve accessibility by ensuring that navigation buttons are intuitive and elements are optimized for different screen sizes.
 
-Refer to detailed meeting notes in the GitHub repository: 
-
-## 3. User Experience (UX) Considerations
+Refer to detailed meeting notes in the GitHub repository: [
+link](https://github.com/ucsb-cs184-f24/team09-Shopping/tree/main/team)
+## 3. User Experience Considerations
 
 ### High-Level User Flow
 - **Authentication**:
@@ -46,7 +52,7 @@ Refer to detailed meeting notes in the GitHub repository:
   - Users access **HomeScreen.js** to manage household shopping lists, add new items, and filter or edit items.
   - After shopping, expenses can be split via **BalancesScreen.js**, which ensures fair cost sharing.
 
-### UX Goals
+### UI
 - **Simplicity**: The UI is designed to make navigation intuitive, with clear buttons and minimal forms.
 - **Accessibility**: Color contrast and button sizes are chosen to cater to a broad range of users.
 - **User Guidance**: The user is guided through each flow step-by-step, such as signing up, joining a household, or adding items.
