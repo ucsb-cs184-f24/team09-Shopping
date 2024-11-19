@@ -281,7 +281,7 @@ export default function ProfileScreen() {
         {image ? (
           <Image source={{ uri: image }} style={{ width: 150, height: 150 }} />
         ) : (
-          <MaterialCommunityIcons name="account" size={150} color="black" />
+          <MaterialCommunityIcons name="account" size={150} color="gray" />
         )}
         <View style={styles.uploadBtnContainer}>
           <TouchableOpacity onPress={addImage} style={styles.uploadBtn}>
