@@ -573,6 +573,7 @@ export default function BalancesScreen() {
           }}
           contentContainerStyle={styles.transactionContainer}
         />
+
       ) : (
         <Text style={styles.noHouseholdSelectedText}>Please select a household to view balances.</Text>
       )}
