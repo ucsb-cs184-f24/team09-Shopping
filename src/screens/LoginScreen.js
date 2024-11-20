@@ -13,6 +13,7 @@ export default function LoginScreen({ navigation }) {
         signInWithEmailAndPassword(auth, email, password)
             .then(userCredentials => {
                 console.log('Logged in with:', userCredentials.user.email);
+                alert("You successfully signed in!");
             })
             .catch(error => {
                 if (error.code === 'auth/invalid-email') {
