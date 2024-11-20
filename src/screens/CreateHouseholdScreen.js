@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Image, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Modal} from 'react-native';
+import { View, ScrollView, Text, TextInput, Button, StyleSheet, Image, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Modal} from 'react-native';
 import { collection, addDoc, query, onSnapshot, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import { getDoc, doc } from 'firebase/firestore';
@@ -215,37 +215,59 @@ export default function CreateHouseholdScreen({ navigation }) {
                 visible={householdModalVisible}
                 animationType="slide"
             >
-                <View style={styles.modalContainer}>
-                    <View style={styles.householdModal}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Create a household</Text>
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                >
+                    <ScrollView
+                        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <View style={styles.modalContainer}>
+                            <View style={styles.householdModal}>
+                                <View style={styles.modalHeader}>
+                                    <Text style={styles.modalTitle}>Create a Household</Text>
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    value={householdName}
+                                    onChangeText={setHouseholdName}
+                                    placeholder="Enter household name"
+                                />
+                                <View
+                                    style={{
+                                        height: 20,
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    {errorMessage ? (
+                                        <Text style={styles.error}>{errorMessage}</Text>
+                                    ) : (
+                                        <Text style={styles.error}></Text>
+                                    )}
+                                </View>
+                                <View style={styles.modalButtonContainer}>
+                                    <TouchableOpacity
+                                        style={styles.actionButtonWrapper}
+                                        onPress={() => createHousehold()}
+                                    >
+                                        <Text style={styles.buttonWithIcon}>Create!</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.actionButtonWrapper2}
+                                        onPress={() => {
+                                            setHouseholdModalVisible(false);
+                                            setErrorMessage(""); // Clear error message on Cancel
+                                        }}
+                                    >
+                                        <Text style={styles.buttonWithIcon}>Cancel</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         </View>
-                        <TextInput
-                            style={styles.input}
-                            value={householdName}
-                            onChangeText={setHouseholdName}
-                            placeholder='Enter household name'
-                        />
-                        <View style={{ height: 20, justifyContent: 'center', alignItems: 'center' }}>
-                            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : <Text style={styles.error}></Text>}
-                        </View>
-
-                        <View style={styles.modalButtonContainer}>
-                            <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => createHousehold()}>
-                                <Text style={styles.buttonWithIcon}>Create!</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={styles.actionButtonWrapper2} 
-                                onPress={() => {
-                                    setHouseholdModalVisible(false);
-                                    setErrorMessage(""); // Clear error message on Cancel
-                                }}    
-                            >
-                                <Text style={styles.buttonWithIcon}>Cancel</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </Modal>
         </KeyboardAvoidingView>
     );
@@ -449,7 +471,11 @@ const styles = StyleSheet.create({
         padding: 20,
         borderRadius: 10,
         margin: 20,
-        height: '21%',
+        elevation: 5, // Shadow for Android
+        shadowColor: '#000', // Shadow for iOS
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
     modalHeader: {
         flexDirection: 'row',
