@@ -1,5 +1,5 @@
 The code that I focused on evaluating is shown in the 4 pictures of this HW04 folder  
-The test results I got are found using **Live Testing** in the respective folders for each of the code portions I was assigned to:    
+The test results I got are found using **Live Testing** in the **HW04_TestResults** folder, where there are folders for each of the code portions I was assigned to:  
   
 **Create Account**  
 **Log In**  
