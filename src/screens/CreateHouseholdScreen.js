@@ -159,7 +159,6 @@ export default function CreateHouseholdScreen({ navigation }) {
                 </Text>
             </View>
 
-            {/* Action Buttons */}
             {households.length > 0 ? (  
                 <View style={styles.householdContainer}>
                     <View style={styles.subtitleContainer}>
@@ -300,8 +299,8 @@ const styles = StyleSheet.create({
     },
     householdContainer: {
         backgroundColor: "#ECECEC", // Secondary Color
-        marginLeft: 20,
-        marginRight: 20,
+        marginLeft: 25,
+        marginRight: 25,
         marginTop: 32,
         borderRadius: 8,
         shadowColor: '#000000',  // Black color
@@ -336,12 +335,11 @@ const styles = StyleSheet.create({
         padding: 14,
         width: '100%',
         backgroundColor: '#fff',
-        marginBottom: 5,
+        marginBottom: 12,
         borderRadius: 10,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: "#F5F5F5",
-        gap: 240,
+        justifyContent: "space-between"
     },
     householdText: {
         fontSize: 18,
@@ -397,11 +395,14 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
     },
     actionButtonWrapper2: {
-        backgroundColor: "red",
+        backgroundColor: "#DF0808",
         flexDirection:'row',
         padding: 11,
         borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center'
     },
+
     modalButtonContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -419,12 +420,9 @@ const styles = StyleSheet.create({
     buttonText: {
         color: "#000",
         fontSize: 16,
+        fontWeight: "bold",
         fontFamily: "Avenir",
-    },
-    cancelButtonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontFamily: "Avenir",
+        color: "white"
     },
     button: {
         // flexDirection: 'row', // Ensure icon and text are in a row
@@ -495,6 +493,11 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
         backgroundColor: 'lightgray',
     },
+    rightArrow: {
+        alignContent: "flex-end",
+    }
+
+
     // fab: {
     //     position: 'absolute',
     //     width: 60,
