@@ -1,1 +1,10 @@
+# User Feedback Ideas
 
+## First Idea
+We would like to have user feedback on the user's experience of adding, removing, and editing items in the grocery list. For examples, do users prefer to be able to sort by category (current implementation), or do they prefer to have multiple seperate grocery lists potentially for each category? Furthermore, do users like to have these categories predefined (less room for user error but less flexibility) or do they want to be able to create categories themselves (more room for user error but more flexibility)? These are just some ideas, but we would love to hear general feedback on these feature as they are the core features of our app.
+
+## Second Idea
+We would like to have user feedback on the users experience of interacting/joining/creating/leaving households. We are curious if there are features that they would like to see implemented. For example, would users like to have a "owner" of a household that can kick members of a household or is this an unnecessary feature that can only lead to problems? We also are curious about user's experience of joining households. Is it easy enough to join households with our current implemenation or is there another method of joining that they would like to see? More generally, we want to know if there are any other features related to households that users would like. For example, would they like more customization of the household for more interactivity?
+
+## Third Idea
+We would like the users feedback on the household balances page. We want to provide an easy way to keep track of payments and want it to be as intuitive as possible. Do users feel like the current household balances page helps them keep track of payments, or is it overly complicated and makes it harder? We obviously don't want to create a solution to a problem that is harder the existing solution in real life. We just want to know if this is a feature that they would actually find helpful. If not, what could be changed to make it helpful?

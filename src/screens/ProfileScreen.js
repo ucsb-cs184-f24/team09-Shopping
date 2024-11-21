@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Modal, Button, View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, Modal, View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
 import { getAuth, deleteUser, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
       await reauthenticateWithCredential(user, credential);
       return true;
     } catch (error) {
-      Alert.alert('Error', 'Re-authentication failed. Please check your password and try again.');
+      Alert.alert('Error', 'Re-authentication failed. Please check your current password and try again.');
       return false;
     }
   };
@@ -155,6 +155,7 @@ export default function ProfileScreen() {
             signOut(auth)
               .then(() => {
                 console.log("Successfully signed out of the account");
+                alert("You successfully signed out of your account!");
               })
               .catch(error => Alert.alert('Error', error.message));
           }
@@ -335,25 +336,17 @@ export default function ProfileScreen() {
               <Ionicons name={currentPasswordVisible ? "eye" : "eye-off"} size={24} color="black" />
             </TouchableOpacity>
           </View>
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Enter new password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!passwordVisible}
-            />
-            <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
-              <Ionicons name={passwordVisible ? "eye" : "eye-off"} size={24} color="black" />
-            </TouchableOpacity>
+  
+          <View>
+            <View style={styles.nameContainer}>
+              <Text style={styles.name}>{name}</Text>
+            </View>
           </View>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity onPress={updateUserPassword} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save Password</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => cancelEdit("password")} style={styles.cancelButton}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+  
+          <View style={styles.fieldContainer}>
+            <View style={styles.fieldDisplay}>
+              <Text style={styles.info}>Email: {userData?.email || 'Loading...'}</Text>
+            </View>
           </View>
         </View>
       ) : (
@@ -402,16 +395,56 @@ export default function ProfileScreen() {
             <TouchableOpacity style={styles.cancelDeleteButton} onPress={() => setDeleteModalVisible(false)}>
               <Text style={styles.cancelDeleteButtonText}>Cancel</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
+          )}
+  
+          {creationDate && (
+            <View style={styles.creationDateContainer}>
+              <Text style={styles.creationDateText}>
+                Account created on: {creationDate.toLocaleDateString()} {creationDate.toLocaleTimeString()}
+              </Text>
+            </View>
+          )}
+  
+          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+  
+          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+            <Text style={styles.deleteAccountText}>Delete Account</Text>
+          </TouchableOpacity>
+  
+          <Modal
+            visible={deleteModalVisible}
+            transparent={true}
+            animationType='slide'
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>Type "DELETE to confirm</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder='Type DELETE to confirm'
+                  value={confirmationText}
+                  onChangeText={setConfirmationText}
+                />
+                <TouchableOpacity style={styles.confirmButton} onPress={confirmDeleteAccount}>
+                  <Text style={styles.confirmButtonText}>Confirm Delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancelDeleteButton} onPress={() => setDeleteModalVisible(false)}>
+                  <Text style={styles.cancelDeleteButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 20,
     alignItems: 'center',
     backgroundColor: '#fff',
