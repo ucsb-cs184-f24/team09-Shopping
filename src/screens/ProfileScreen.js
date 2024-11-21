@@ -41,7 +41,8 @@ export default function ProfileScreen() {
           setName(data.name || '');
           setPhone(data.phone || '');
           setAddress(data.address || '');
-          setCreationDate(data.createdAt.toDate())
+          setCreationDate(data.createdAt.toDate());
+          setImage(data.profileImage || null); // Set the image URI from Firestore
         } else {
           console.log("No such user exists in Firestore!");
         }
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
       console.log("Error fetching user data: ", error);
     }
   };
+  
 
   useEffect(() => {
     fetchUserData();
@@ -265,11 +267,18 @@ export default function ProfileScreen() {
       aspect: [4,3],
       quality: 1,
     });
-    console.log(JSON.stringify(_image));
     if (!_image.canceled) {
       setImage(_image.assets[0].uri);
+      
+      // Save image URI to Firestore
+      const user = auth.currentUser;
+      if (user) {
+        const docRef = doc(db, "users", user.uid);
+        await setDoc(docRef, { profileImage: _image.assets[0].uri }, { merge: true });
+      }
     }
   };
+  
 
   return (
     <View style={styles.container}>
@@ -290,6 +299,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
 
 
       <View>
