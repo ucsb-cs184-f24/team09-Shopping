@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import { Ionicons } from 'react-native-vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons'; // Corrected import
 import HouseholdStack from './HouseholdStack';
 import BalancesScreen from '../screens/BalancesScreen';
 
@@ -21,9 +21,9 @@ export default function App() {
                 } else if (route.name === 'Create Household') {
                     iconName = 'home';
                 } else if (route.name ==='Profile') {
-                    iconName = 'person-circle'
-                } else if (route.name == 'Balances'){
-                    iconName = 'wallet-outline'
+                    iconName = 'person-circle';
+                } else if (route.name === 'Balances') {
+                    iconName = 'wallet';
                 }
 
                 return <Ionicons name={iconName} size={size} color={color} />;
