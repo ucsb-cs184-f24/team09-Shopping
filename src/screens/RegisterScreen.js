@@ -44,6 +44,7 @@ export default function RegisterScreen({ navigation }) {
             });
 
             console.log('Registered with:', user.email);
+            alert(`Welcome ${user.displayName}! You are registered with: ${user.email}`);
         } catch (error) {
             if (error.code === 'auth/email-already-in-use') {
                 alert('This email is already associated with an account.');
