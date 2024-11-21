@@ -414,7 +414,10 @@ const addItemToList = async () => {
     } else {
       try {
         const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
-        await updateDoc(itemRef, { isPurchased: !currentStatus });
+        await updateDoc(itemRef, {
+          isPurchased: !currentStatus,
+          purchasedDate: !currentStatus ? new Date() : null, // Add or clear purchasedDate
+        });  
       } catch (error) {
         Alert.alert('Error', 'Failed to update item status. Please try again.');
         console.error(error);
@@ -767,7 +770,11 @@ const addItemToList = async () => {
               onPress={async () => {
                 try {
                   const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
-                  await updateDoc(itemRef, { isPurchased: true, cost: parseFloat(inputCost) });
+                  await updateDoc(itemRef, {
+                    isPurchased: true,
+                    cost: parseFloat(inputCost),
+                    purchasedDate: new Date(),
+                  });
                   setCostModalVisible(false);
                   setInputCost('');
                 } catch (error) {
