@@ -306,7 +306,7 @@ export default function ProfileScreen() {
   
           <View style={styles.imageContainer}>
             {image ? (
-              <Image source={{ uri: image }} style={{ width: 150, height: 150 }} />
+              <Image source={{ uri: image }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
             ) : (
               <MaterialCommunityIcons name="account" size={150} color="gray" />
             )}
@@ -421,15 +421,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   imageContainer: {
-    elevation:2,
-    height: 120,
-    width: 120,
-    backgroundColor:'#efefef',
-    position:'relative',
-    borderRadius:999,
-    overflow:'hidden',
+    height: 150,               
+    width: 150,              
+    backgroundColor: '#efefef',
+    borderRadius: 75,          
+    overflow: 'hidden',       
+    alignItems: 'center',      
+    justifyContent: 'center', 
     marginBottom: 18,
   },
+  
   uploadBtnContainer:{
     gap: 1,
     opacity:0.7,
