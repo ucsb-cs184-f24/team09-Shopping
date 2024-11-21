@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     },
     noHouseholdsText: {
         textAlign: 'center',
-        fontSize: 19,
+        fontSize: 20,
         color: "#000",
         marginTop: 20,
         fontFamily: "Avenir",
