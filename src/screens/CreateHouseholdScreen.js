@@ -39,7 +39,7 @@ export default function CreateHouseholdScreen({ navigation }) {
             setHouseholdName('');
             fetchDisplayName();
             // console.log("Display Name after fetch:", displayName);
-        }, [displayName])
+        }, [])
     );
 
     // Fetch households associated with user
