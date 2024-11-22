@@ -18,6 +18,8 @@ export const updateBalancesAfterSplit = async (selectedHouseholdID, customAmount
           owedBy: memberId,
           owedTo: userId,
           amount: amount,
+          repaymentAmount: 0, // initalize repayment amount to 0
+          repayments: [],
           itemsDetails: itemsDetails,
           createdAt: serverTimestamp(),
         });
