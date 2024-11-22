@@ -1,41 +1,46 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Node.js dependencies
 node_modules/
 
-# Expo
+# Expo files
 .expo/
+.expo-shared/
 dist/
 web-build/
 
-# Native
+# Native build artifacts
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
-<<<<<<< HEAD
-*.orig.*
-web-build/
-yarn.lock
-=======
 
-# Metro
+# Metro bundler
 .metro-health-check*
 
-# debug
+# Debug logs
 npm-debug.*
 yarn-debug.*
-yarn-error.*
->>>>>>> 9896780a76ec4681a20620a4fc149274201046bb
+yarn-error.log
 
-# macOS
+# macOS system files
 .DS_Store
 *.pem
 
-# local env files
+# Local environment files
 .env*.local
 
-# typescript
+# TypeScript
 *.tsbuildinfo
+
+# Editor files
+*.swo
+*.swp
+.idea/
+.vscode/
+*.log
+
+# Lock files (optional, depending on your team preferences)
+yarn.lock
+package-lock.json
+pnpm-lock.yaml

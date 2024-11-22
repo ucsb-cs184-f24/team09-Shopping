@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import Ionicons from '@expo/vector-icons/Ionicons'; // Corrected import
+import Ionicons from '@expo/vector-icons/Ionicons';
 import HouseholdStack from './HouseholdStack';
 import BalancesScreen from '../screens/BalancesScreen';
 
