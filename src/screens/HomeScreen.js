@@ -306,10 +306,16 @@ const addItemToList = async () => {
   const deleteItem = async (itemId) => {
     try {
       // Reference to the specific item in the items subcollection
+      console.log('deleteItem called with itemId:', itemId);
+    console.log('selectedHouseholdID:', selectedHouseholdID);
+    console.log('shoppingListMeta:', shoppingListMeta);
+    console.log('shoppingListMeta.id:', shoppingListMeta ? shoppingListMeta.id : 'undefined');
+
       const itemRef = doc(
         db,
         `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items/${itemId}`
       );
+
       // Delete the item document
       await deleteDoc(itemRef);
       
@@ -734,8 +740,6 @@ const addItemToList = async () => {
                     `The assigned amounts (${totalAssigned.toFixed(2)}) must equal the total cost (${totalCost.toFixed(2)}).`
                   );
                 } else {
-                  setSplitMembersModalVisible(false);
-                  setSplitItemsModalVisible(false);
                   setShowCustomAmountModal(false);
                   proceedWithSplitBill(totalCost);
                 }
