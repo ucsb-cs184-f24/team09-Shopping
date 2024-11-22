@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Modal, ScrollView, KeyboardAvoidingView, Platform, Button, View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
 import { getAuth, deleteUser, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { deleteDoc, doc, getDoc, setDoc, getFirestore, collection, query, where, getDocs, updateDoc, arrayRemove } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
@@ -41,7 +41,8 @@ export default function ProfileScreen() {
           setName(data.name || '');
           setPhone(data.phone || '');
           setAddress(data.address || '');
-          setCreationDate(data.createdAt.toDate())
+          setCreationDate(data.createdAt.toDate());
+          setImage(data.profileImage || null); // Set the image URI from Firestore
         } else {
           console.log("No such user exists in Firestore!");
         }
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
       console.log("Error fetching user data: ", error);
     }
   };
+  
 
   useEffect(() => {
     fetchUserData();
@@ -275,11 +277,18 @@ export default function ProfileScreen() {
       aspect: [4,3],
       quality: 1,
     });
-    console.log(JSON.stringify(_image));
     if (!_image.canceled) {
       setImage(_image.assets[0].uri);
+      
+      // Save image URI to Firestore
+      const user = auth.currentUser;
+      if (user) {
+        const docRef = doc(db, "users", user.uid);
+        await setDoc(docRef, { profileImage: _image.assets[0].uri }, { merge: true });
+      }
     }
   };
+  
 
   return (
     <KeyboardAvoidingView
@@ -296,10 +305,15 @@ export default function ProfileScreen() {
           </View>
   
           <View style={styles.imageContainer}>
-            {image && <Image source={{ uri: image }} style={{ width: 120, height: 120 }} />}
+            {image ? (
+              <Image source={{ uri: image }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+            ) : (
+              <MaterialCommunityIcons name="account" size={150} color="gray" />
+            )}
             <View style={styles.uploadBtnContainer}>
               <TouchableOpacity onPress={addImage} style={styles.uploadBtn}>
-                <Ionicons name="camera" size={20} color="black" />
+                <Text style={styles.uploadImageText}>{image ? 'Edit' : 'Upload'}</Text>
+                <Ionicons name="camera-outline" size={20} color="black" />
               </TouchableOpacity>
             </View>
           </View>
@@ -407,15 +421,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   imageContainer: {
-    elevation:2,
-    height: 120,
-    width: 120,
-    backgroundColor:'#efefef',
-    position:'relative',
-    borderRadius:999,
-    overflow:'hidden',
+    height: 150,               
+    width: 150,              
+    backgroundColor: '#efefef',
+    borderRadius: 75,          
+    overflow: 'hidden',       
+    alignItems: 'center',      
+    justifyContent: 'center', 
     marginBottom: 18,
   },
+  
   uploadBtnContainer:{
     gap: 1,
     opacity:0.7,

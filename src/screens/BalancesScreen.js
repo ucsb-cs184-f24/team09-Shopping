@@ -634,6 +634,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
+    fontFamily: "Avenir",
     textAlign: 'center',
     color: '#003366',
     marginBottom: 20,
@@ -665,6 +666,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontWeight: 'bold',
     fontSize: 16,
+    fontFamily: "Avenir",
     color: '#333',
   },
   itemsDetailsContainer: {
@@ -674,6 +676,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     marginLeft: 10,
+    fontFamily: "Avenir",
   },
   noHouseholdSelectedText: {
     fontSize: 16,
@@ -683,7 +686,7 @@ const styles = StyleSheet.create({
   },
   recordPaymentButton: {
     alignSelf: 'center',
-    backgroundColor: '#007BFF',
+    backgroundColor: '#008F7A',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
