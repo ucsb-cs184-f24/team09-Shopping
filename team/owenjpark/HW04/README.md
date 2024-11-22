@@ -1,4 +1,5 @@
 # HW04 Contributions
+NOTE: These contribution may not be in main yet. Checkout the op-HW04 branch to see these changes.
 
 ## Summary of Contributions
 - **Set Up Jest**: Configured Jest testing framework for the project.
