@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { BarChart } from 'react-native-chart-kit';
+import { BarChart, PieChart } from 'react-native-chart-kit';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import { getISOWeek } from 'date-fns';
@@ -13,9 +13,24 @@ export default function SummaryPage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [timeRange, setTimeRange] = useState('monthly');
-  const [isTimeRangeDropdownOpen, setIsTimeRangeDropdownOpen] = useState(false);
   const [chartData, setChartData] = useState([]);
+  const [categoryData, setCategoryData] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const chartConfig = {
+    backgroundColor: '#ffffff',
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#ffffff',
+    decimalPlaces: 2,
+    color: (opacity = 1) => `rgba(63, 81, 181, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: {
+      borderRadius: 8,
+    },
+    propsForBackgroundLines: {
+      stroke: '#e3e3e3',
+    },
+  };
 
   useEffect(() => {
     const fetchHouseholds = async () => {
@@ -69,8 +84,10 @@ export default function SummaryPage() {
 
           allItems.push(...items);
 
-          const processedData = processChartData(allItems, timeRange);
-          setChartData(processedData);
+          const processedChartData = processChartData(allItems, timeRange);
+          const processedCategoryData = processCategoryData(allItems);
+          setChartData(processedChartData);
+          setCategoryData(processedCategoryData);
           setLoading(false);
         });
       });
@@ -78,7 +95,7 @@ export default function SummaryPage() {
 
     return () => unsubscribe();
   }, [selectedHouseholdId, timeRange]);
-  
+
   const processChartData = (items, range) => {
     const groupedData = {};
 
@@ -104,14 +121,36 @@ export default function SummaryPage() {
     }));
   };
 
+  const generateColor = () => {
+    return `#${Math.floor(Math.random() * 16777215)
+      .toString(16)
+      .padStart(6, '0')}`; // Ensure 6 characters
+  };
+  
+  const processCategoryData = (items) => {
+    const groupedData = {};
+  
+    items.forEach((item) => {
+      const category = item.category || 'Uncategorized';
+      groupedData[category] = (groupedData[category] || 0) + (item.cost || 0);
+    });
+  
+    return Object.keys(groupedData).map((key) => ({
+      label: key,
+      cost: groupedData[key],
+      name: `${key} ($${groupedData[key].toFixed(2)})`,
+      color: generateColor(),
+      legendFontColor: '#333',
+      legendFontSize: 14,
+    }));
+  };
+
   return (
     <SafeAreaView style={styles.safeContainer}>
       <FlatList
         data={[{ key: 'content' }]} // Dummy data to render content
         renderItem={() => (
           <View style={styles.contentContainer}>
-            <Text style={styles.title}>Summary</Text>
-
             {/* Dropdown for Household */}
             <DropDownPicker
               open={isDropdownOpen}
@@ -124,6 +163,37 @@ export default function SummaryPage() {
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
             />
+
+            {/* Time Range Buttons */}
+            <View style={styles.buttonGroup}>
+              <Text
+                style={[
+                  styles.timeRangeButton,
+                  timeRange === 'weekly' && styles.selectedButton,
+                ]}
+                onPress={() => setTimeRange('weekly')}
+              >
+                Weekly
+              </Text>
+              <Text
+                style={[
+                  styles.timeRangeButton,
+                  timeRange === 'monthly' && styles.selectedButton,
+                ]}
+                onPress={() => setTimeRange('monthly')}
+              >
+                Monthly
+              </Text>
+              <Text
+                style={[
+                  styles.timeRangeButton,
+                  timeRange === 'yearly' && styles.selectedButton,
+                ]}
+                onPress={() => setTimeRange('yearly')}
+              >
+                Yearly
+              </Text>
+            </View>
 
             {/* Card Container */}
             <View style={styles.card}>
@@ -139,39 +209,24 @@ export default function SummaryPage() {
                       }}
                       width={350} // Fixed width for chart
                       height={220}
-                      chartConfig={{
-                        backgroundColor: '#ffffff',
-                        backgroundGradientFrom: '#ffffff',
-                        backgroundGradientTo: '#ffffff',
-                        decimalPlaces: 2,
-                        color: (opacity = 1) => `rgba(63, 81, 181, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                        style: {
-                          borderRadius: 8,
-                        },
-                        propsForBackgroundLines: {
-                          stroke: '#e3e3e3',
-                        },
-                        barPercentage: 0.7,
-                      }}
+                      chartConfig={chartConfig}
                       style={styles.chart}
                     />
                   </View>
 
-                  <DropDownPicker
-                    open={isTimeRangeDropdownOpen}
-                    value={timeRange}
-                    items={[
-                      { label: 'Weekly', value: 'weekly' },
-                      { label: 'Monthly', value: 'monthly' },
-                      { label: 'Yearly', value: 'yearly' },
-                    ]}
-                    setOpen={setIsTimeRangeDropdownOpen}
-                    setValue={setTimeRange}
-                    placeholder="Select Time Range"
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                  />
+                  <View style={styles.chartContainer}>
+                    <PieChart
+                      data={categoryData}
+                      width={350}
+                      height={220}
+                      chartConfig={chartConfig}
+                      accessor="cost"
+                      backgroundColor="transparent"
+                      paddingLeft="15"
+                      absolute
+                      style={styles.chart}
+                    />
+                  </View>
                 </>
               ) : (
                 <Text style={styles.noDataText}>No data available for the selected range.</Text>
@@ -210,9 +265,31 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     zIndex: 1000,
   },
+  buttonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  timeRangeButton: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#555',
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    textAlign: 'center',
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  selectedButton: {
+    backgroundColor: '#3F51B5',
+    color: '#fff',
+    borderColor: '#3F51B5',
+  },
   card: {
     backgroundColor: '#fff',
-    padding: 16,
+    padding: 4,
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
