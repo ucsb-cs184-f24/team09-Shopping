@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { BarChart, PieChart } from 'react-native-chart-kit';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useFocusEffect } from '@react-navigation/native';
 import { db, auth } from '../../firebaseConfig';
 import { getISOWeek } from 'date-fns';
 
@@ -32,69 +33,86 @@ export default function SummaryPage() {
     },
   };
 
-  useEffect(() => {
-    const fetchHouseholds = async () => {
-      try {
-        const userId = auth.currentUser.uid;
-        const q = query(collection(db, 'households'), where('members', 'array-contains', userId));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          const userHouseholds = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+  const fetchHouseholds = useCallback(() => {
+    const userId = auth.currentUser.uid;
+    const q = query(collection(db, 'households'), where('members', 'array-contains', userId));
 
-          setHouseholds(userHouseholds);
-          setHouseholdItems(
-            userHouseholds.map((household) => ({
-              label: household.displayHouseholdName
-                ? household.displayHouseholdName
-                : `Household ${household.id.substring(0, 6)}`,
-              value: household.id,
-            }))
-          );
-        });
-        return () => unsubscribe();
-      } catch (error) {
-        console.error('Error fetching households:', error);
-      }
-    };
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const userHouseholds = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-    fetchHouseholds();
+      setHouseholds(userHouseholds);
+      setHouseholdItems(
+        userHouseholds.map((household) => ({
+          label: household.displayHouseholdName
+            ? household.displayHouseholdName
+            : `Household ${household.id.substring(0, 6)}`,
+          value: household.id,
+        }))
+      );
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
+  const fetchChartData = useCallback(() => {
     if (!selectedHouseholdId) return;
 
     setLoading(true);
     const shoppingListsRef = collection(db, `households/${selectedHouseholdId}/shoppingLists`);
+
     const unsubscribe = onSnapshot(shoppingListsRef, (shoppingListsSnapshot) => {
       const allItems = [];
-      shoppingListsSnapshot.forEach((listDoc) => {
+
+      const fetchItems = shoppingListsSnapshot.docs.map((listDoc) => {
         const itemsRef = collection(
           db,
           `households/${selectedHouseholdId}/shoppingLists/${listDoc.id}/items`
         );
-        onSnapshot(itemsRef, (itemsSnapshot) => {
-          const items = itemsSnapshot.docs
-            .map((doc) => ({
-              ...doc.data(),
-              purchasedDate: doc.data().purchasedDate?.toDate(),
-            }))
-            .filter((item) => item.isPurchased && item.purchasedDate);
-
-          allItems.push(...items);
-
-          const processedChartData = processChartData(allItems, timeRange);
-          const processedCategoryData = processCategoryData(allItems);
-          setChartData(processedChartData);
-          setCategoryData(processedCategoryData);
-          setLoading(false);
+        return new Promise((resolve) => {
+          onSnapshot(itemsRef, (itemsSnapshot) => {
+            const items = itemsSnapshot.docs
+              .map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+                purchasedDate: doc.data().purchasedDate?.toDate(),
+              }))
+              .filter((item) => item.isPurchased && item.purchasedDate);
+            resolve(items);
+          });
         });
+      });
+
+      Promise.all(fetchItems).then((results) => {
+        results.forEach((items) => allItems.push(...items));
+
+        const uniqueItems = Array.from(
+          new Map(allItems.map((item) => [item.id, item])).values()
+        );
+
+        const processedChartData = processChartData(uniqueItems, timeRange);
+        const processedCategoryData = processCategoryData(uniqueItems);
+
+        setChartData(processedChartData);
+        setCategoryData(processedCategoryData);
+        setLoading(false);
       });
     });
 
     return () => unsubscribe();
   }, [selectedHouseholdId, timeRange]);
+
+  useEffect(() => {
+    fetchHouseholds();
+  }, [fetchHouseholds]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchChartData();
+    }, [fetchChartData])
+  );
 
   const processChartData = (items, range) => {
     const groupedData = {};
@@ -126,15 +144,15 @@ export default function SummaryPage() {
       .toString(16)
       .padStart(6, '0')}`; // Ensure 6 characters
   };
-  
+
   const processCategoryData = (items) => {
     const groupedData = {};
-  
+
     items.forEach((item) => {
       const category = item.category || 'Uncategorized';
       groupedData[category] = (groupedData[category] || 0) + (item.cost || 0);
     });
-  
+
     return Object.keys(groupedData).map((key) => ({
       label: key,
       cost: groupedData[key],
@@ -151,7 +169,6 @@ export default function SummaryPage() {
         data={[{ key: 'content' }]} // Dummy data to render content
         renderItem={() => (
           <View style={styles.contentContainer}>
-            {/* Dropdown for Household */}
             <DropDownPicker
               open={isDropdownOpen}
               value={selectedHouseholdId}
@@ -163,8 +180,6 @@ export default function SummaryPage() {
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
             />
-
-            {/* Time Range Buttons */}
             <View style={styles.buttonGroup}>
               <Text
                 style={[
@@ -194,8 +209,6 @@ export default function SummaryPage() {
                 Yearly
               </Text>
             </View>
-
-            {/* Card Container */}
             <View style={styles.card}>
               {loading ? (
                 <Text style={styles.loadingText}>Loading...</Text>
@@ -247,13 +260,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     margin: 16, // Add margin around the content
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
-    textAlign: 'center',
   },
   dropdown: {
     marginBottom: 20,
