@@ -712,10 +712,10 @@ const addItemToList = async () => {
                     <TextInput
                       style={{ borderWidth: 1, padding: 5, width: 100 }}
                       keyboardType="numeric"
-                      value={customAmounts[item]?.toString() || ''}
+                      value={customAmounts[item] || ''}
                       onChangeText={(value) => {
                         const newAmounts = { ...customAmounts };
-                        newAmounts[item] = parseFloat(value) || 0;
+                        newAmounts[item] = value; // Store raw input
                         setCustomAmounts(newAmounts);
                       }}
                     />
@@ -727,7 +727,18 @@ const addItemToList = async () => {
             <Button
               title="Confirm Split"
               onPress={() => {
-                const totalAssigned = Object.values(customAmounts).reduce(
+                const parsedAmounts = {};
+                let invalidInput = false;
+                Object.keys(customAmounts).forEach((key) => {
+                const amount = parseFloat(customAmounts[key]);
+                  if (isNaN(amount)) {
+                    Alert.alert('Error', 'Please enter valid numeric amounts.');
+                    return;
+                  } else {
+                    parsedAmounts[key] = amount;
+                  }
+                });
+                const totalAssigned = Object.values(parsedAmounts).reduce(
                   (sum, amount) => sum + amount,
                   0
                 );
