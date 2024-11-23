@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Button } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { collection, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
+import { WebView } from 'react-native-webview';
+
+// TODO (COMPLETE): If user to pay does not have PayPal Account, alert user that other user needs to create PayPal account under their profile email
+// TODO: Subtract amount paid in firebase to correctly display remaining debt, also need to check if current user owes anything to other user (similar logic to handlePayment?)
+
 // Function to update balances after splitting the bill
 export const updateBalancesAfterSplit = async (selectedHouseholdID, selectedMembers, splitAmount, itemsDetails) => {
   try {
@@ -37,6 +42,7 @@ export default function BalancesScreen() {
   const [transactions, setTransactions] = useState([]);
   const [owedDetails, setOwedDetails] = useState([]);
   const [householdItems, setHouseholdItems] = useState([]);
+  const [isAmountModalVisible, setIsAmountModalVisible] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
   const [payTo, setPayTo] = useState('');
@@ -45,6 +51,11 @@ export default function BalancesScreen() {
   const [balances, setBalances] = useState([]);
   const [netBalances, setNetBalances] = useState([]);
   const [householdMembersCount, setHouseholdMembersCount] = useState(1);
+  const [isPayPalWebViewVisible, setIsPayPalWebViewVisible] = useState(false);
+  const [payPalUrl, setPayPaylUrl] = useState('');
+  const [householdMembers, setHouseholdMembers] = useState([]);
+  const [selectedMember, setSelectedMember] = useState(null);
+
   useEffect(() => {
     if (selectedHouseholdId) {
       const balancesRef = collection(db, `households/${selectedHouseholdId}/balances`);
@@ -214,7 +225,7 @@ export default function BalancesScreen() {
   };
 
   const normalizeFloat = (value, precision = 2) => {
-    return parseFloat(value.toFixed(precision));
+    return parseFloat(value).toFixed(precision);
   };
 
   const handleRecordPayment = async () => {
@@ -230,7 +241,7 @@ export default function BalancesScreen() {
   
     try {
       const userId = auth.currentUser.uid;
-      const paymentAmountValue = normalizeFloat(parseFloat(paymentAmount));
+      const paymentAmountValue = parseFloat(paymentAmount) || 0;
   
       const balancesRef = query(
         collection(db, `households/${selectedHouseholdId}/balances`),
@@ -256,8 +267,9 @@ export default function BalancesScreen() {
         );
         balances.push({ ...balanceData, id: doc.id, ref: doc.ref });
       });
+
   
-      if (totalRemainingDebt === 0) {
+      if (parseFloat(totalRemainingDebt) === 0) {
         Alert.alert('Warning', 'You do not owe any money to the selected person.');
         return;
       }
@@ -278,7 +290,10 @@ export default function BalancesScreen() {
         const { amount, repaymentAmount = 0, repayments = [] } = balance;
         const docRef = balance.ref;
   
-        const newRepaymentAmount = normalizeFloat(repaymentAmount + remainingPayment);
+        const repaymentAmountNumeric = parseFloat(repaymentAmount) || 0;
+        const remainingPaymentNumeric = parseFloat(remainingPayment) || 0;
+        const newRepaymentAmount = normalizeFloat(repaymentAmountNumeric + remainingPaymentNumeric);
+        console.log(newRepaymentAmount);
   
         if (newRepaymentAmount >= amount) {
           // Settle debt completely
@@ -287,7 +302,7 @@ export default function BalancesScreen() {
             status: 'settled',
             repayments: [
               ...repayments,
-              { amount: remainingPayment, date: new Date().toISOString() }, // Add repayment record
+              { amount: remainingPayment, date: new Date().toISOString(), paymentMethod: 'cash' }, // Add repayment record
             ],
             lastUpdated: serverTimestamp(),
           });
@@ -298,7 +313,7 @@ export default function BalancesScreen() {
             repaymentAmount: newRepaymentAmount,
             repayments: [
               ...repayments,
-              { amount: remainingPayment, date: new Date().toISOString() }, // Add repayment record
+              { amount: remainingPayment, date: new Date().toISOString(), paymentMethod: 'cash' }, // Add repayment record
             ],
             lastUpdated: serverTimestamp(),
           });
@@ -315,6 +330,197 @@ export default function BalancesScreen() {
       Alert.alert('Error', 'Failed to record payment. Please try again.');
     }
   };
+
+  useEffect(() => {
+    fetchHouseholdMembers();
+  }, [selectedHouseholdId]);
+
+  const fetchHouseholdMembers = async () => {
+    try {
+      if (!selectedHouseholdId) {
+        console.log('No household selected.');
+        return;
+      }
+  
+      const householdRef = doc(db, 'households', selectedHouseholdId);
+      const householdSnapshot = await getDoc(householdRef);
+  
+      if (householdSnapshot.exists()) {
+        console.log('Household data:', householdSnapshot.data());
+        
+        const members = householdSnapshot.data().members || [];
+        console.log('Household members:', members);
+        const membersFiltered = members.filter((uid) => uid != auth.currentUser.uid);
+  
+        const memberData = await Promise.all(
+          membersFiltered.map(async (memberId) => {
+            const memberRef = doc(db, 'users', memberId);
+            const memberSnapshot = await getDoc(memberRef);
+  
+            if (memberSnapshot.exists()) {
+              const { name, email } = memberSnapshot.data();
+              console.log(`Fetched member: ${name}, ${email}`);
+              return { label: name, value: memberId, email };
+            } else {
+              console.log(`No data found for user ID: ${memberId}`);
+            }
+            return null;
+          })
+        );
+  
+        const filteredMembers = memberData.filter((member) => member !== null);
+        console.log('Filtered members:', filteredMembers);
+  
+        setHouseholdMembers(filteredMembers);
+      } else {
+        console.warn(`No household found with ID: ${selectedHouseholdId}`);
+      }
+    } catch (error) {
+      console.error('Error fetching household members:', error);
+    }
+  };
+  
+
+  const handlePayPalPayment = async () => {
+    try {
+      if (!selectedMember) {
+        Alert.alert('Error', 'Please select a member to pay.');
+        return;
+      }
+
+      if (!paymentAmount || isNaN(paymentAmount) || parseFloat(paymentAmount) <= 0) {
+        Alert.alert('Error', 'Please enter a valid amount.');
+        return;
+      }
+
+      const userId = auth.currentUser.uid;
+      const paymentAmountValue = normalizeFloat(parseFloat(paymentAmount));
+      const balancesRef = query(
+        collection(db, `households/${selectedHouseholdId}/balances`),
+        where('owedBy', '==', userId),
+        where('owedTo', '==', selectedMember)
+      );
+
+      const balancesSnapshot = await getDocs(balancesRef);
+  
+      if (balancesSnapshot.empty) {
+        Alert.alert('Error', 'No debt found between you and the selected person.');
+        return;
+      }
+  
+      let totalRemainingDebt = 0;
+  
+      // Calculate total debt
+      balancesSnapshot.docs.forEach((doc) => {
+        const balanceData = doc.data();
+        totalRemainingDebt = normalizeFloat(
+          totalRemainingDebt + (balanceData.amount || 0) - (balanceData.repaymentAmount || 0)
+        );
+      });
+  
+      if (parseFloat(totalRemainingDebt) === 0) {
+        Alert.alert('Warning', 'You do not owe any money to the selected person.');
+        return;
+      }
+  
+      if (paymentAmountValue > totalRemainingDebt) {
+        Alert.alert('Overpayment Warning', `You are overpaying by $${normalizeFloat(paymentAmountValue - totalRemainingDebt)}. Please modify your payment amount.`);
+        return;
+      }
+  
+      // At this point, debt exists; proceed to generate PayPal URL
+      const memberRef = doc(db, 'users', selectedMember);
+      const memberSnapshot = await getDoc(memberRef);
+
+      if (!memberSnapshot.exists()) {
+        Alert.alert('Error', 'The selected member does not have a valid profile.');
+        return;
+      }
+
+      const memberData = memberSnapshot.data();
+      const { email } = memberData;
+
+      if (!email) {
+        Alert.alert('Error', 'The selected member does not have a valid PayPal email.');
+        return;
+      }
+  
+      // Proceed to generate PayPal payment URL
+      const payPalPaymentUrl = `https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${email}&amount=${paymentAmount}&currency_code=USD&return=https://CartShare.com/success&cancel_return=https://CartShare.com/cancel`;
+  
+      console.log('PayPal URL:', payPalPaymentUrl);
+  
+      setPayPaylUrl(payPalPaymentUrl);
+      setIsPayPalWebViewVisible(true);
+    } catch (error) {
+      console.error('Error processing PayPal payment:', error);
+      Alert.alert('Error', 'Failed to process payment. Please try again.');
+    }
+  };
+
+  const handlePayPalSuccess = async (paymentAmount, payTo) => {
+    try {
+      const userId = auth.currentUser.uid;
+      const paymentAmountValue = normalizeFloat(parseFloat(paymentAmount));
+
+      const balancesRef = query(
+        collection(db, `households/${selectedHouseholdId}/balances`),
+        where('owedBy', '==', userId),
+        where('owedTo', '==', payTo)
+      );
+
+      const balancesSnapshot = await getDocs(balancesRef);
+
+      let remainingPayment = paymentAmountValue;
+      const balances = [];
+
+      balancesSnapshot.docs.forEach((doc) => {
+        const balanceData = doc.data();
+        balances.push({ ...balanceData, id: doc.id, ref: doc.ref });
+      });
+
+      balances.sort((a, b) => a.amount - b.amount);
+
+      for (let i = 0; i < balances.length && remainingPayment > 0; ++i) {
+        const balance = balances[i];
+        const { amount, repaymentAmount = 0, repayments = [] } = balance;
+        const docRef = balance.ref;
+
+        const repaymentAmountNumeric = parseFloat(repaymentAmount) || 0;
+        const remainingPaymentNumeric = parseFloat(remainingPayment) || 0;
+        const newRepaymentAmount = normalizeFloat(repaymentAmountNumeric + remainingPaymentNumeric);
+
+        if (newRepaymentAmount >= amount) {
+          // settle debt completely
+          await updateDoc(docRef, {
+            repaymentAmount: amount,
+            status: 'settled',
+            repayments: [
+              ...repayments,
+              { amount: amount - repaymentAmount, date: new Date().toISOString(), paymentMethod: 'paypal' },
+            ],
+            lastUpdated: serverTimestamp(),
+          });
+          remainingPayment = normalizeFloat(newRepaymentAmount - amount);
+        } else {
+          // partially reduce debt
+          await updateDoc(docRef, {
+            repaymentAmount: newRepaymentAmount,
+            repayments: [
+              ...repayments,
+              { amount: remainingPayment, date: new Date().toISOString(), paymentMethod: 'paypal' },
+            ],
+            lastUpdated: serverTimestamp(),
+          });
+          remainingPayment = 0;
+        }
+      }
+    } catch (error) {
+      console.error('Error handling PayPal success:', error);
+      Alert.alert('Error', 'Failed to record payment after PayPal transaction. Please try again.');
+    }
+  };
+  
   
 
   
@@ -402,6 +608,7 @@ export default function BalancesScreen() {
               owedByUsername: balance.owedByUsername,
               owedToUsername: balance.owedToUsername,
               amount: repayment.amount,
+              paymentMethod: repayment.paymentMethod || 'cash',
               createdAt: repayment.date,
             }));
   
@@ -427,6 +634,7 @@ export default function BalancesScreen() {
           });
   
           setTransactions(transactions);
+          console.log(transactions);
         } catch (error) {
           console.error('Error fetching household or balances:', error);
         }
@@ -487,7 +695,10 @@ export default function BalancesScreen() {
               return (
                 <View style={[styles.transactionCard, styles.repaymentTransaction]}>
                   <Text style={styles.transactionDescription}>
-                    Repayment of ${item.amount.toFixed(2)} from {item.owedByUsername} to {item.owedToUsername}
+                    Repayment of ${normalizeFloat(item.amount)} from {item.owedByUsername} to {item.owedToUsername}
+                  </Text>
+                  <Text style={styles.transactionMethod}>
+                    Method: {item.paymentMethod === 'paypal' ? 'PayPal' : 'Cash'}
                   </Text>
                   <Text style={styles.transactionDate}>
                     Date: {item.createdAt
@@ -578,11 +789,31 @@ export default function BalancesScreen() {
         <Text style={styles.noHouseholdSelectedText}>Please select a household to view balances.</Text>
       )}
   
-      {/* Record Payment Button */}
-      <TouchableOpacity style={styles.recordPaymentButton} onPress={() => setIsPaymentModalVisible(true)}>
-        <Text style={styles.recordPaymentButtonText}>Record Payment</Text>
-      </TouchableOpacity>
-  
+      <View style={styles.buttonRow}>
+        {selectedHouseholdId && (
+          <>
+            {/* Record Payment Button */}
+            <TouchableOpacity
+              style={styles.recordPaymentButton}
+              onPress={() => setIsPaymentModalVisible(true)}
+            >
+              <Text style={styles.recordPaymentButtonText}>Record Payment</Text>
+            </TouchableOpacity>
+
+            {/* PayPal Payment Button */}
+            <TouchableOpacity
+              style={styles.payPalButton}
+              onPress={() => {
+                setIsAmountModalVisible(true);
+              }}
+            >
+              <Text style={styles.payPalButtonText}>Pay with PayPal</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+
+
       {/* Record Payment Modal */}
       {isPaymentModalVisible && (
         <Modal visible={isPaymentModalVisible} transparent={true} animationType="slide">
@@ -617,6 +848,108 @@ export default function BalancesScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Amount Input Modal (PayPal button) */}
+      {isAmountModalVisible && (
+        <Modal visible={isAmountModalVisible} transparent={true} animationType="slide">
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Enter Payment Amount</Text>
+              {/* Dropdown for Member Selection */}
+              <TextInput
+                style={styles.input}
+                placeholder="Enter amount"
+                keyboardType="numeric"
+                value={paymentAmount}
+                onChangeText={(text) => setPaymentAmount(text)}
+              />
+              <DropDownPicker
+                open={isDropdownOpen}
+                value={selectedMember}
+                items={householdMembers}
+                setOpen={setIsDropdownOpen}
+                setValue={setSelectedMember}
+                placeholder="Select a member"
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+                listMode="SCROLLVIEW"
+              />
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.payButton}
+                  onPress={() => {
+                    setIsAmountModalVisible(false);
+                    handlePayPalPayment();
+                  }}
+                >
+                  <Text style={styles.buttonText}>Confirm</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setIsAmountModalVisible(false)}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* PayPal WebView */}
+      {isPayPalWebViewVisible && (
+        <Modal visible={isPayPalWebViewVisible} transparent={true}>
+          <View style={styles.webViewContainer}>
+            <WebView
+              source={{ uri: payPalUrl }}
+              style={styles.webView}
+              onNavigationStateChange={async (navState) => {
+                const { url, title }= navState;
+                // console.log('Navigated to URL:', navState.url);
+                // console.log('Page Title:', navState.title);
+
+                // PayPal error page
+                if (
+                  url.includes('INVALID_BUSINESS_ERROR') ||
+                  title.toLowerCase().includes('Please try again')
+                ) {
+                  setIsPayPalWebViewVisible(false);
+                  Alert.alert(
+                    'PayPal Error',
+                    'The recipient does not have a PayPal account associated with their email. Please ask them to create one and try again.'
+                  );
+                  return;
+                }
+
+                if (url.includes('success')) {
+                  setIsPayPalWebViewVisible(false);
+                  
+                  // call debt reduction logic
+                  if (!selectedMember || !paymentAmount) {
+                    Alert.alert('Error', 'Member or payment amount is missing.');
+                    return;
+                  }
+
+                  try {
+                    await handlePayPalSuccess(paymentAmount, selectedMember);
+                    Alert.alert('Success', 'Payment completed successfully!');
+                  } catch (error) {
+                    console.error('Error processing PayPal payment:', error);
+                    Alert.alert('Success', 'Payment completed successfully!');
+                  }
+                  return;
+                }
+
+                if (url.includes('cancel')) {
+                  setIsPayPalWebViewVisible(false);
+                  Alert.alert('Cancelled', 'Payment was cancelled.');
+                  return;
+                }
+              }}
+            />
           </View>
         </Modal>
       )}
@@ -777,6 +1110,12 @@ const styles = StyleSheet.create({
     marginTop: 5,
     textAlign: 'right',
   },
+  transactionMethod: {
+    fontSize: 14,     
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
   transactionContainer: {
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -821,6 +1160,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginLeft: 10, // Add spacing between buttons
     alignItems: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  payPalButton: {
+    alignSelf: 'center',
+    backgroundColor: '#0000FF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginVertical: 8,
+  },
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)'
+  },
+  webView: {
+    flex: 1,
+  },
+  payPalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   
 });
