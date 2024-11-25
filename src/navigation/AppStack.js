@@ -2,9 +2,10 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import { Ionicons } from 'react-native-vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons'; // Corrected import
 import HouseholdStack from './HouseholdStack';
 import BalancesScreen from '../screens/BalancesScreen';
+import SummaryScreen from '../screens/SummaryScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -22,8 +23,10 @@ export default function App() {
                     iconName = 'home';
                 } else if (route.name ==='Profile') {
                     iconName = 'person-circle'
-                } else if (route.name == 'Balances'){
-                    iconName = 'wallet-outline'
+                } else if (route.name === 'Summary') {
+                    iconName = 'bar-chart';
+                } else if (route.name === 'Balances') {
+                    iconName = 'wallet';
                 }
 
                 return <Ionicons name={iconName} size={size} color={color} />;
@@ -50,6 +53,14 @@ export default function App() {
                     tabBarLabel: 'Home' // Set the tab title here
                 }}   />
             <Tab.Screen name="Balances" component={BalancesScreen} options={{title: 'Balances'}} />
+            <Tab.Screen 
+                name="Summary" 
+                component={SummaryScreen} 
+                options={{ 
+                    title: 'Summary',
+                    tabBarLabel: 'Summary',
+                }} 
+            />
             <Tab.Screen name="Profile" component={ProfileScreen}
                 options={{ 
                     headerShown: false,
