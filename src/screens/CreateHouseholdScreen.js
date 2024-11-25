@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Image, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Modal} from 'react-native';
+import { View, ScrollView, Text, TextInput, Button, StyleSheet, Image, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Modal} from 'react-native';
 import { collection, addDoc, query, onSnapshot, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import { getDoc, doc } from 'firebase/firestore';
@@ -159,7 +159,6 @@ export default function CreateHouseholdScreen({ navigation }) {
                 </Text>
             </View>
 
-            {/* Action Buttons */}
             {households.length > 0 ? (  
                 <View style={styles.householdContainer}>
                     <View style={styles.subtitleContainer}>
@@ -215,37 +214,59 @@ export default function CreateHouseholdScreen({ navigation }) {
                 visible={householdModalVisible}
                 animationType="slide"
             >
-                <View style={styles.modalContainer}>
-                    <View style={styles.householdModal}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Create a household</Text>
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                >
+                    <ScrollView
+                        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <View style={styles.modalContainer}>
+                            <View style={styles.householdModal}>
+                                <View style={styles.modalHeader}>
+                                    <Text style={styles.modalTitle}>Create a Household</Text>
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    value={householdName}
+                                    onChangeText={setHouseholdName}
+                                    placeholder="Enter household name"
+                                />
+                                <View
+                                    style={{
+                                        height: 20,
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    {errorMessage ? (
+                                        <Text style={styles.error}>{errorMessage}</Text>
+                                    ) : (
+                                        <Text style={styles.error}></Text>
+                                    )}
+                                </View>
+                                <View style={styles.modalButtonContainer}>
+                                    <TouchableOpacity
+                                        style={styles.actionButtonWrapper}
+                                        onPress={() => createHousehold()}
+                                    >
+                                        <Text style={styles.buttonWithIcon}>Create!</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.actionButtonWrapper2}
+                                        onPress={() => {
+                                            setHouseholdModalVisible(false);
+                                            setErrorMessage(""); // Clear error message on Cancel
+                                        }}
+                                    >
+                                        <Text style={styles.buttonWithIcon}>Cancel</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
                         </View>
-                        <TextInput
-                            style={styles.input}
-                            value={householdName}
-                            onChangeText={setHouseholdName}
-                            placeholder='Enter household name'
-                        />
-                        <View style={{ height: 20, justifyContent: 'center', alignItems: 'center' }}>
-                            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : <Text style={styles.error}></Text>}
-                        </View>
-
-                        <View style={styles.modalButtonContainer}>
-                            <TouchableOpacity style={styles.actionButtonWrapper} onPress={() => createHousehold()}>
-                                <Text style={styles.buttonWithIcon}>Create!</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={styles.actionButtonWrapper2} 
-                                onPress={() => {
-                                    setHouseholdModalVisible(false);
-                                    setErrorMessage(""); // Clear error message on Cancel
-                                }}    
-                            >
-                                <Text style={styles.buttonWithIcon}>Cancel</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </Modal>
         </KeyboardAvoidingView>
     );
@@ -278,8 +299,8 @@ const styles = StyleSheet.create({
     },
     householdContainer: {
         backgroundColor: "#ECECEC", // Secondary Color
-        marginLeft: 20,
-        marginRight: 20,
+        marginLeft: 25,
+        marginRight: 25,
         marginTop: 32,
         borderRadius: 8,
         shadowColor: '#000000',  // Black color
@@ -314,12 +335,11 @@ const styles = StyleSheet.create({
         padding: 14,
         width: '100%',
         backgroundColor: '#fff',
-        marginBottom: 5,
+        marginBottom: 12,
         borderRadius: 10,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: "#F5F5F5",
-        gap: 240,
+        justifyContent: "space-between"
     },
     householdText: {
         fontSize: 18,
@@ -375,11 +395,14 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
     },
     actionButtonWrapper2: {
-        backgroundColor: "red",
+        backgroundColor: "#DF0808",
         flexDirection:'row',
         padding: 11,
         borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center'
     },
+
     modalButtonContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -397,12 +420,9 @@ const styles = StyleSheet.create({
     buttonText: {
         color: "#000",
         fontSize: 16,
+        fontWeight: "bold",
         fontFamily: "Avenir",
-    },
-    cancelButtonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontFamily: "Avenir",
+        color: "white"
     },
     button: {
         // flexDirection: 'row', // Ensure icon and text are in a row
@@ -449,7 +469,11 @@ const styles = StyleSheet.create({
         padding: 20,
         borderRadius: 10,
         margin: 20,
-        height: '21%',
+        elevation: 5, // Shadow for Android
+        shadowColor: '#000', // Shadow for iOS
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -469,6 +493,11 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
         backgroundColor: 'lightgray',
     },
+    rightArrow: {
+        alignContent: "flex-end",
+    }
+
+
     // fab: {
     //     position: 'absolute',
     //     width: 60,
