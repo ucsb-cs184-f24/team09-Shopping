@@ -52,10 +52,6 @@ export default function HomeScreen() {
   const [selectedMembers, setSelectedMembers] = useState([]); // Array of strings of household members IDs
   const [selectedItems, setSelectedItems] = useState([]); // Array of strings of items IDs
 
-  useEffect(() => {
-    console.log('Updated households:', households);
-  }, [households]);
-
   // Fetch the households associated with the user and automatically assign first one
   useEffect(() => {
     const userId = auth.currentUser.uid;
@@ -139,7 +135,7 @@ export default function HomeScreen() {
 
 
   // Listen for changes in items of shopping list
-useEffect(() => {
+  useEffect(() => {
     if (!selectedHouseholdID || !shoppingListMeta) {
       setShoppingListItems([]);
       setCategories([]);
@@ -224,84 +220,79 @@ useEffect(() => {
     fetchHouseholdMembers();
   }, [selectedHouseholdID]);
 
-
-
-    // Fetch members if selected household changes
-    useEffect(() => {
-      const fetchHouseholdMembers = async () => {
-        if (!selectedHouseholdID) {
-          setHouseholdMembers([]);
-          return;
-        }
-        try {
-          const householdDocRef = doc(db, 'households', selectedHouseholdID);
-          const householdDoc = await getDoc(householdDocRef);
-          const members = householdDoc.data().members;
-          const membersInfo = await Promise.all(
-            members.map(async (uid) => {
-              try {
-                const userDocRef = doc(db, 'users', uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                  return { uid, name: userDoc.data().name };
-                }
-                else {
-                  console.warn(`No user found with UID: ${uid}`);
-                }
-              } catch (error) {
-                console.error(`Failed to fetch user with UID: ${uid}`, error);
+  // Fetch members if selected household changes
+  useEffect(() => {
+    const fetchHouseholdMembers = async () => {
+      if (!selectedHouseholdID) {
+        setHouseholdMembers([]);
+        return;
+      }
+      try {
+        const householdDocRef = doc(db, 'households', selectedHouseholdID);
+        const householdDoc = await getDoc(householdDocRef);
+        const members = householdDoc.data().members;
+        const membersInfo = await Promise.all(
+          members.map(async (uid) => {
+            try {
+              const userDocRef = doc(db, 'users', uid);
+              const userDoc = await getDoc(userDocRef);
+              if (userDoc.exists()) {
+                return { uid, name: userDoc.data().name };
               }
-              return null;
-            })
-          );
-          setHouseholdMembers(membersInfo.filter(info => info !== null));
-        } catch (error) {
-          console.error("Error fetching household:", error);
-        }
-      };
-      fetchHouseholdMembers();
-    }, [selectedHouseholdID]);
+              else {
+                console.warn(`No user found with UID: ${uid}`);
+              }
+            } catch (error) {
+              console.error(`Failed to fetch user with UID: ${uid}`, error);
+            }
+            return null;
+          })
+        );
+        setHouseholdMembers(membersInfo.filter(info => info !== null));
+      } catch (error) {
+        console.error("Error fetching household:", error);
+      }
+    };
+    fetchHouseholdMembers();
+  }, [selectedHouseholdID]);
 
-
-  
   // Add a new item to Firestore
-const addItemToList = async () => {
-  if (!selectedHouseholdID || !shoppingListMeta) {
-    Alert.alert('Error', 'Please select a household with an active shopping list before adding items.');
-    return;
-  }
+  const addItemToList = async () => {
+    if (!selectedHouseholdID || !shoppingListMeta) {
+      Alert.alert('Error', 'Please select a household with an active shopping list before adding items.');
+      return;
+    }
 
-  if (newItemName.trim() === '' || newItemCategory.trim() === '') {
-    Alert.alert('Error', 'Please enter an item name and its category');
-    return;
-  }
+    if (newItemName.trim() === '' || newItemCategory.trim() === '') {
+      Alert.alert('Error', 'Please enter an item name and its category');
+      return;
+    }
 
-  const newItemObj = {
-    itemName: newItemName,
-    category: newItemCategory,
-    cost: newItemCost ? parseFloat(newItemCost) : 0,
-    addedBy: auth.currentUser.email,
-    isPurchased: false,
-    addedDate: new Date(),
+    const newItemObj = {
+      itemName: newItemName,
+      category: newItemCategory,
+      cost: newItemCost ? parseFloat(newItemCost) : 0,
+      addedBy: auth.currentUser.email,
+      isPurchased: false,
+      addedDate: new Date(),
+    };
+
+    try {
+      const itemsRef = collection(
+        db,
+        `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
+      );
+      await addDoc(itemsRef, newItemObj);
+
+      setNewItemName('');
+      setNewItemCategory('');
+      setNewItemCost('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item. Please try again.');
+      console.error(error);
+    }
   };
 
-  try {
-    const itemsRef = collection(
-      db,
-      `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
-    );
-    await addDoc(itemsRef, newItemObj);
-
-    setNewItemName('');
-    setNewItemCategory('');
-    setNewItemCost('');
-  } catch (error) {
-    Alert.alert('Error', 'Failed to add item. Please try again.');
-    console.error(error);
-  }
-};
-
-  
   // Delete an item
   const deleteItem = async (itemId) => {
     try {
@@ -345,8 +336,6 @@ const addItemToList = async () => {
       console.error(error);
     }
   };
-
-
 
   const splitBill = async () => {
     if (selectedMembers.length === 0) {
@@ -392,8 +381,6 @@ const addItemToList = async () => {
       Alert.alert('Error', 'Failed to record the split.');
     }
   };
-  
-  
   
   const toggleItemSelection = (item) => {
     setSelectedItems((prevSelected) => {
