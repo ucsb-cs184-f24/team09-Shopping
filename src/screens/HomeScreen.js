@@ -7,7 +7,6 @@ import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { updateBalancesAfterSplit } from './BalancesScreen'; 
 
-
 // TODO (COMPLETE): remove items from list of respective household when user leaves group
 // TODO (COMPLETE): do not allow split bill on checked off items
 // TODO (COMPLETE): Only allow split bill if household has more than 1 user, implement cleaner UI i.e. button padding
@@ -53,6 +52,10 @@ export default function HomeScreen() {
   const [selectedMembers, setSelectedMembers] = useState([]); // Array of strings of household members IDs
   const [selectedItems, setSelectedItems] = useState([]); // Array of strings of items IDs
 
+  useEffect(() => {
+    console.log('Updated households:', households);
+  }, [households]);
+
   // Fetch the households associated with the user and automatically assign first one
   useEffect(() => {
     const userId = auth.currentUser.uid;
@@ -80,8 +83,6 @@ export default function HomeScreen() {
 
     return () => unsubscribe();
   }, []);
-  
-
 
   // Select household by updating householdId
   const selectHousehold = (householdId) => {
@@ -94,6 +95,7 @@ export default function HomeScreen() {
     }
     setHouseholdModalVisible(false);
   };
+
   // Listen for changes in shopping list meta data
   useEffect(() => {
     if (!selectedHouseholdID) {
@@ -432,7 +434,6 @@ const addItemToList = async () => {
   
       setHouseholdModalVisible(false);
     };
-  
   };
 
   return (
@@ -741,57 +742,57 @@ const addItemToList = async () => {
         </View>
       </Modal>
 
-    {/* Modal for cost */}
-    <Modal
-      visible={costModalVisible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setCostModalVisible(false)}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.editModalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Enter Item Cost</Text>
-            <Button title="Close" onPress={() => setCostModalVisible(false)} />
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter item cost"
-            value={inputCost}
-            onChangeText={setInputCost}
-            keyboardType="numeric"
-          />
-          <View style={styles.modalButtonContainer}>
-            <TouchableOpacity
-              style={styles.actionButtonWrapper}
-              onPress={async () => {
-                try {
-                  const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
-                  await updateDoc(itemRef, { isPurchased: true, cost: parseFloat(inputCost) });
+      {/* Modal for cost */}
+      <Modal
+        visible={costModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCostModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.editModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Enter Item Cost</Text>
+              <Button title="Close" onPress={() => setCostModalVisible(false)} />
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item cost"
+              value={inputCost}
+              onChangeText={setInputCost}
+              keyboardType="numeric"
+            />
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={async () => {
+                  try {
+                    const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
+                    await updateDoc(itemRef, { isPurchased: true, cost: parseFloat(inputCost) });
+                    setCostModalVisible(false);
+                    setInputCost('');
+                  } catch (error) {
+                    Alert.alert('Error', 'Failed to update item cost. Please try again.');
+                    console.error(error);
+                  }
+                }}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper2}
+                onPress={() => {
                   setCostModalVisible(false);
                   setInputCost('');
-                } catch (error) {
-                  Alert.alert('Error', 'Failed to update item cost. Please try again.');
-                  console.error(error);
-                }
-              }}
-            >
-              <Text style={styles.buttonText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButtonWrapper2}
-              onPress={() => {
-                setCostModalVisible(false);
-                setInputCost('');
-              }}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
-  </View>
+      </Modal>
+    </View>
   );
 }
 
