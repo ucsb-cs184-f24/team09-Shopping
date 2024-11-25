@@ -59,20 +59,19 @@ export default function SummaryPage() {
 
   const fetchChartData = useCallback(() => {
     if (!selectedHouseholdId) return;
-
-    setLoading(true);
+  
+    setLoading(true); // Start loading state
     const shoppingListsRef = collection(db, `households/${selectedHouseholdId}/shoppingLists`);
-
-    const unsubscribe = onSnapshot(shoppingListsRef, (shoppingListsSnapshot) => {
+  
+    const unsubscribe = onSnapshot(shoppingListsRef, async (shoppingListsSnapshot) => {
       const allItems = [];
-
       const fetchItems = shoppingListsSnapshot.docs.map((listDoc) => {
         const itemsRef = collection(
           db,
           `households/${selectedHouseholdId}/shoppingLists/${listDoc.id}/items`
         );
         return new Promise((resolve) => {
-          onSnapshot(itemsRef, (itemsSnapshot) => {
+          const itemUnsubscribe = onSnapshot(itemsRef, (itemsSnapshot) => {
             const items = itemsSnapshot.docs
               .map((doc) => ({
                 id: doc.id,
@@ -81,26 +80,31 @@ export default function SummaryPage() {
               }))
               .filter((item) => item.isPurchased && item.purchasedDate);
             resolve(items);
+            itemUnsubscribe(); // Avoid creating unnecessary listeners
           });
         });
       });
-
-      Promise.all(fetchItems).then((results) => {
+  
+      try {
+        const results = await Promise.all(fetchItems);
         results.forEach((items) => allItems.push(...items));
-
+  
         const uniqueItems = Array.from(
           new Map(allItems.map((item) => [item.id, item])).values()
         );
-
+  
         const processedChartData = processChartData(uniqueItems, timeRange);
         const processedCategoryData = processCategoryData(uniqueItems);
-
+  
         setChartData(processedChartData);
         setCategoryData(processedCategoryData);
-        setLoading(false);
-      });
+      } catch (error) {
+        console.error('Error fetching chart data:', error);
+      } finally {
+        setLoading(false); // Ensure loading stops
+      }
     });
-
+  
     return () => unsubscribe();
   }, [selectedHouseholdId, timeRange]);
 
@@ -150,7 +154,8 @@ export default function SummaryPage() {
 
     items.forEach((item) => {
       const category = item.category || 'Uncategorized';
-      groupedData[category] = (groupedData[category] || 0) + (item.cost || 0);
+      const cost = Number(item.cost) || 0;
+      groupedData[category] = (groupedData[category] || 0) + cost;
     });
 
     return Object.keys(groupedData).map((key) => ({
