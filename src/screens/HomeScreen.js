@@ -274,10 +274,17 @@ const addItemToList = async () => {
     return;
   }
 
+  const cost = newItemCost.trim() ? parseFloat(newItemCost) : 0;
+
+  if (newItemCost.trim() && isNaN(cost)) {
+    Alert.alert('Error', 'Please enter a valid number for the item cost.');
+    return;
+  }
+
   const newItemObj = {
     itemName: newItemName,
     category: newItemCategory,
-    cost: newItemCost ? parseFloat(newItemCost) : 0,
+    cost,
     addedBy: auth.currentUser.email,
     isPurchased: false,
     addedDate: new Date(),
@@ -329,9 +336,15 @@ const addItemToList = async () => {
   // Save edited item
   const saveEdit = async () => {
     if (!currentEditItem) return;
+    const cost = editItemCost.trim() ? parseFloat(editItemCost) : 0;
+
+    if (editItemCost.trim() && isNaN(cost)) {
+      Alert.alert('Error', 'Please enter a valid number for the item cost.');
+      return;
+    }
     try {
       const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentEditItem.id);
-      await updateDoc(itemRef, { itemName: editItemName, category: editItemCategory, cost: editItemCost });
+      await updateDoc(itemRef, { itemName: editItemName, category: editItemCategory, cost });
 
       setEditItemName('');
       setEditItemCategory('');
@@ -414,7 +427,10 @@ const addItemToList = async () => {
     } else {
       try {
         const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
-        await updateDoc(itemRef, { isPurchased: !currentStatus });
+        await updateDoc(itemRef, {
+          isPurchased: !currentStatus,
+          purchasedDate: !currentStatus ? new Date() : null, // Add or clear purchasedDate
+        });  
       } catch (error) {
         Alert.alert('Error', 'Failed to update item status. Please try again.');
         console.error(error);
@@ -767,7 +783,11 @@ const addItemToList = async () => {
               onPress={async () => {
                 try {
                   const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
-                  await updateDoc(itemRef, { isPurchased: true, cost: parseFloat(inputCost) });
+                  await updateDoc(itemRef, {
+                    isPurchased: true,
+                    cost: parseFloat(inputCost),
+                    purchasedDate: new Date(),
+                  });
                   setCostModalVisible(false);
                   setInputCost('');
                 } catch (error) {
