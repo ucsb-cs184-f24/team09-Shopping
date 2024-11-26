@@ -15,7 +15,7 @@ export default function HomeScreen() {
   // Household states
   const [households, setHouseholds] = useState([]); // Array of household objects that user is part of
   const [selectedHouseholdID, setSelectedHouseholdID] = useState('');  // String of ID of selected household
-  const [selectedHouseholdName, setSelectedHouseholdName] = useState(''); // NEW: Name of selected household
+  const [selectedHouseholdName, setSelectedHouseholdName] = useState(''); // Sting of name of selected household
   const [householdMembers, setHouseholdMembers] = useState([]); // Array of objects of users within a household
 
   // Shopping list states
@@ -68,7 +68,7 @@ export default function HomeScreen() {
       if (userHouseholds.length > 0 && !selectedHouseholdID) {
         const defaultHousehold = userHouseholds[0];
         setSelectedHouseholdID(defaultHousehold.id);
-        setSelectedHouseholdName(defaultHousehold.displayHouseholdName || 'Unnamed Household');
+        setSelectedHouseholdName(defaultHousehold.displayHouseholdName);
       }
       else {
         // If there are no households, clear the selected household
@@ -80,18 +80,6 @@ export default function HomeScreen() {
     return () => unsubscribe();
   }, []);
 
-  // Select household by updating householdId
-  const selectHousehold = (householdId) => {
-    if (householdId && households.some(h => h.id === householdId)) {
-      setSelectedHouseholdID(householdId);
-    } else {
-      setSelectedHouseholdID('');
-      setShoppingListMeta(null);
-      setShoppingListItems([]);
-    }
-    setHouseholdModalVisible(false);
-  };
-
   // Listen for changes in shopping list meta data
   useEffect(() => {
     if (!selectedHouseholdID) {
@@ -110,44 +98,18 @@ export default function HomeScreen() {
     });
     return () => unsubscribe();
   }, [selectedHouseholdID]);
-
-
-
-  // Listen for changes in shopping list meta data
-  useEffect(() => {
-    if (!selectedHouseholdID) {
-      setShoppingListMeta(null);
-      return;
-    }
-    const q = collection(db, `households/${selectedHouseholdID}/shoppingLists`);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const shoppingLists = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      // Get first shopping list metadata (shoppingLists[0])
-      const defaultShoppingListMeta = shoppingLists[0];
-      setShoppingListMeta(defaultShoppingListMeta);
-    });
-    return () => unsubscribe();
-  }, [selectedHouseholdID]);
-
-
 
   // Listen for changes in items of shopping list
   useEffect(() => {
-    if (!selectedHouseholdID || !shoppingListMeta) {
+    if (!shoppingListMeta) {
       setShoppingListItems([]);
       setCategories([]);
       return;
     }
   
-    const itemsRef = collection(
-      db,
-      `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
-    );
-    const unsubscribe = onSnapshot(itemsRef, (itemsSnapshot) => {
-      const items = itemsSnapshot.docs.map((doc) => ({
+    const q = collection(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
@@ -159,9 +121,7 @@ export default function HomeScreen() {
     });
   
     return () => unsubscribe();
-  }, [selectedHouseholdID, shoppingListMeta]);
-
-
+  }, [shoppingListMeta]);
   
   // Filter the shopping list based on the selected category
   const filterListByCategory = (category) => {
@@ -182,83 +142,44 @@ export default function HomeScreen() {
   
   // Fetch members if selected household changes
   useEffect(() => {
-    const fetchHouseholdMembers = async () => {
-      if (!selectedHouseholdID) {
-        setHouseholdMembers([]);
-        return;
-      }
-
-      try {
-        const householdDocRef = doc(db, 'households', selectedHouseholdID);
-        const householdDoc = await getDoc(householdDocRef);
-
-        const members = householdDoc.data().members;
-        const membersInfo = await Promise.all(
-          members.map(async (uid) => {
-            try {
-              const userDocRef = doc(db, 'users', uid);
-              const userDoc = await getDoc(userDocRef);
-              if (userDoc.exists()) {
-                return { uid, name: userDoc.data().name };
-              }
-              else {
-                console.warn(`No user found with UID: ${uid}`);
-              }
-            } catch (error) {
-              console.error(`Failed to fetch user with UID: ${uid}`, error);
+    if (!selectedHouseholdID) {
+      setHouseholdMembers([]);
+      return;
+    }
+  
+    const householdDocRef = doc(db, 'households', selectedHouseholdID);
+  
+    const unsubscribe = onSnapshot(householdDocRef, async (snapshot) => {
+      const members = snapshot.data().members;
+  
+      const membersInfo = await Promise.all(
+        members.map(async (uid) => {
+          try {
+            const userDocRef = doc(db, 'users', uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              return { uid, name: userDoc.data().name };
+            } else {
+              console.warn(`No user found with UID: ${uid}`);
             }
-            return null;
-          })
-        );
-
-        setHouseholdMembers(membersInfo.filter(info => info !== null));
-      } catch (error) {
-        console.error("Error fetching household:", error);
-      }
-    };
-
-    fetchHouseholdMembers();
-  }, [selectedHouseholdID]);
-
-  // Fetch members if selected household changes
-  useEffect(() => {
-    const fetchHouseholdMembers = async () => {
-      if (!selectedHouseholdID) {
-        setHouseholdMembers([]);
-        return;
-      }
-      try {
-        const householdDocRef = doc(db, 'households', selectedHouseholdID);
-        const householdDoc = await getDoc(householdDocRef);
-        const members = householdDoc.data().members;
-        const membersInfo = await Promise.all(
-          members.map(async (uid) => {
-            try {
-              const userDocRef = doc(db, 'users', uid);
-              const userDoc = await getDoc(userDocRef);
-              if (userDoc.exists()) {
-                return { uid, name: userDoc.data().name };
-              }
-              else {
-                console.warn(`No user found with UID: ${uid}`);
-              }
-            } catch (error) {
-              console.error(`Failed to fetch user with UID: ${uid}`, error);
-            }
-            return null;
-          })
-        );
-        setHouseholdMembers(membersInfo.filter(info => info !== null));
-      } catch (error) {
-        console.error("Error fetching household:", error);
-      }
-    };
-    fetchHouseholdMembers();
-  }, [selectedHouseholdID]);
+          } catch (error) {
+            console.error(`Failed to fetch user with UID: ${uid}`, error);
+          }
+          return null;
+        })
+      );
+  
+      // Update the state with filtered members info
+      setHouseholdMembers(membersInfo.filter(info => info !== null));
+    });
+  
+    // Cleanup listener when the component unmounts or household changes
+    return () => unsubscribe();
+  }, [selectedHouseholdID]);  
 
   // Add a new item to Firestore
   const addItemToList = async () => {
-    if (!selectedHouseholdID || !shoppingListMeta) {
+    if (!selectedHouseholdID) {
       Alert.alert('Error', 'Please select a household with an active shopping list before adding items.');
       return;
     }
@@ -278,10 +199,7 @@ export default function HomeScreen() {
     };
 
     try {
-      const itemsRef = collection(
-        db,
-        `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
-      );
+      const itemsRef = collection(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`);
       await addDoc(itemsRef, newItemObj);
 
       setNewItemName('');
@@ -297,10 +215,8 @@ export default function HomeScreen() {
   const deleteItem = async (itemId) => {
     try {
       // Reference to the specific item in the items subcollection
-      const itemRef = doc(
-        db,
-        `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items/${itemId}`
-      );
+      const itemRef = doc(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items/${itemId}`);
+
       // Delete the item document
       await deleteDoc(itemRef);
       
@@ -409,18 +325,18 @@ export default function HomeScreen() {
         console.error(error);
       }
     }
+  };
 
-    const selectHousehold = (householdId) => {
-      setSelectedHouseholdID(householdId);
-      
-      // Find the name of the selected household
-      const household = households.find(h => h.id === householdId);
-      if (household) {
-        setSelectedHouseholdName(household.displayHouseholdName || 'Unnamed Household');
-      }
-  
-      setHouseholdModalVisible(false);
-    };
+  const selectHousehold = (householdId) => {
+    setSelectedHouseholdID(householdId);
+    
+    // Find the name of the selected household
+    const household = households.find(h => h.id === householdId);
+    if (household) {
+      setSelectedHouseholdName(household.displayHouseholdName || 'Unnamed Household');
+    }
+
+    setHouseholdModalVisible(false);
   };
 
   return (
@@ -430,7 +346,9 @@ export default function HomeScreen() {
       </Text>
 
       <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
-        <Text style={styles.householdButtonText}>Select Household</Text>
+        <Text style={styles.householdButtonText}>
+          {selectedHouseholdName || "Select a household"}
+        </Text>
       </TouchableOpacity>
       
       <TextInput
@@ -460,7 +378,6 @@ export default function HomeScreen() {
         <Text style={styles.filterButtonText}>Filter</Text>
       </TouchableOpacity>
       
-          
       <FlatList
         data={filteredShoppingListItems}
         keyExtractor={(item) => item.id}
@@ -722,6 +639,7 @@ export default function HomeScreen() {
                   key={household.id}
                   label={household.displayHouseholdName || "Unnamed Household"}
                   value={household.id}
+                  color="#000"
                 />
               ))}
             </Picker>
