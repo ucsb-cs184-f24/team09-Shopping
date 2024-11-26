@@ -347,7 +347,7 @@ export default function HomeScreen() {
 
       <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
         <Text style={styles.householdButtonText}>
-          {selectedHouseholdName || "Select a household"}
+          Select Household
         </Text>
       </TouchableOpacity>
       
