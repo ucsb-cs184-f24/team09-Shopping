@@ -494,7 +494,7 @@ export default function HomeScreen() {
           <View style={styles.splitModalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
-              <View style={{ paddingBottom: 13 }}> {/* TEMPORARY FIX */}
+              <View style={{ paddingBottom: 13 }}>
                 <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
               </View>
             </View>
@@ -524,7 +524,7 @@ export default function HomeScreen() {
                       selectedMembers.includes(item.uid) && styles.memberTextSelected,
                     ]}
                   >
-                    {item.name}
+                    {item.name ? item.name : 'Unnamed Member'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -685,7 +685,7 @@ export default function HomeScreen() {
                   householdMembers.find((member) => member.uid === item)?.name || 'You';
                 return (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={{ flex: 1 }}>{memberName}</Text>
+                    <Text style={{ flex: 1 }}>{memberName || ''}</Text>
                     <TextInput
                       style={{ borderWidth: 1, padding: 5, width: 100 }}
                       keyboardType="numeric"
@@ -780,7 +780,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={styles.actionButtonWrapper}
                 onPress={() => {
-                  saveEdit
+                  saveEdit()
                 }}
               >
                 <Text style={styles.buttonText}>Save</Text>
