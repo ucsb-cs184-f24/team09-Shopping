@@ -396,85 +396,92 @@ export default function HomeScreen() {
         placeholderStyle={styles.dropdownPlaceholder}
       />
 
-      <FlatList
-        data={filteredShoppingListItems}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Swipeable
-            renderRightActions={() => (
-              <View style={{ flexDirection: 'row' }}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => openEditModal(item)}
-                >
-                  <Text style={styles.buttonText}>Edit</Text>
-                </TouchableOpacity>
+      <View style={styles.shoppingListContainer}>
+        <View style={styles.shoppingListHeader}>
+          <Text style={styles.shoppingListTitle}>Shopping List</Text>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setAddItemModalVisible(true)}
+            >
+              <Text style={styles.addButtonText}>+ Add Item</Text>
+            </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => deleteItem(item.id)}
+            <TouchableOpacity
+              style={styles.splitButton}
+              onPress={() => {
+                if (!selectedHouseholdID) {
+                  Alert.alert('Error', 'Please choose a household.');
+                } else if (shoppingListItems.length === 0) {
+                  Alert.alert('Error', 'There are no items in the list for this household.');
+                } else if (householdMembers.length <= 1) {
+                  Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
+                } else {
+                  setSplitMembersModalVisible(true);
+                }
+              }}
+            >
+              <Text style={styles.splitButtonText}>Split</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+              <Ionicons name="options-outline" size={18} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <FlatList
+          data={filteredShoppingListItems}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <Swipeable
+              renderRightActions={() => (
+                <View style={{ flexDirection: 'row' }}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => openEditModal(item)}
+                  >
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => deleteItem(item.id)}
+                  >
+                    <Text style={styles.actionText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            >
+              <View style={styles.listItem}>
+                <View style={styles.textContainer}>
+                  <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
+                    {item.itemName} - ${item.cost}
+                  </Text>
+                  <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
+                    added by {item.addedBy}
+                  </Text>
+                  <Text style={[item.isPurchased && styles.purchasedText]}>
+                    Category: {item.category}
+                  </Text>
+                </View>
+                
+                {/* Radio button to indicate that item has been purchased */}
+                <TouchableOpacity 
+                  style={styles.radioButton}
+                  onPress={() => togglePurchased(item.id, item.isPurchased, item)}
                 >
-                  <Text style={styles.actionText}>Delete</Text>
+                  <Ionicons
+                    name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
+                    size={24}
+                    color={item.isPurchased ? 'orange' : 'gray'}
+                  />
                 </TouchableOpacity>
               </View>
-            )}
-          >
-            <View style={styles.listItem}>
-              <View style={styles.textContainer}>
-                <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
-                  {item.itemName} - ${item.cost}
-                </Text>
-                <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
-                  added by {item.addedBy}
-                </Text>
-                <Text style={[item.isPurchased && styles.purchasedText]}>
-                  Category: {item.category}
-                </Text>
-              </View>
-              
-              {/* Radio button to indicate that item has been purchased */}
-              <TouchableOpacity 
-                style={styles.radioButton}
-                onPress={() => togglePurchased(item.id, item.isPurchased, item)}
-              >
-                <Ionicons
-                  name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
-                  size={24}
-                  color={item.isPurchased ? 'orange' : 'gray'}
-                />
-              </TouchableOpacity>
-            </View>
-          </Swipeable>
-        )}
-      />
-
-      <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
-        <Text style={styles.filterButtonText}>Filter</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.splitButton}
-        onPress={() => {
-          if (!selectedHouseholdID) {
-            Alert.alert('Error', 'Please choose a household.');
-          } else if (shoppingListItems.length === 0) {
-            Alert.alert('Error', 'There are no items in the list for this household.');
-          } else if (householdMembers.length <= 1) {
-            Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
-          } else {
-            setSplitMembersModalVisible(true);
-          }
-        }}
-      >
-        <Text style={styles.splitButtonText}>Split the Bill</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setAddItemModalVisible(true)}
-      >
-        <Text style={styles.addButtonText}>Add Item</Text>
-      </TouchableOpacity>
+            </Swipeable>
+          )}
+        />
+      </View>
 
       {/* Modal for selecting members to split */}
       <Modal
@@ -487,7 +494,9 @@ export default function HomeScreen() {
           <View style={styles.splitModalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
-              <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
+              <View style={{ paddingBottom: 13 }}> {/* TEMPORARY FIX */}
+                <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
+              </View>
             </View>
   
             <FlatList
@@ -509,15 +518,20 @@ export default function HomeScreen() {
                     );
                   }}
                 >
-                  <Text style={{ color: selectedMembers.includes(item.uid) ? '#fff' : '#000' }}>
+                  <Text
+                    style={[
+                      styles.memberText,
+                      selectedMembers.includes(item.uid) && styles.memberTextSelected,
+                    ]}
+                  >
                     {item.name}
                   </Text>
                 </TouchableOpacity>
               )}
             />
   
-            <Button
-              title="Next: Select Items"
+            <TouchableOpacity
+              style={styles.nextButton}
               onPress={() => {
                 if (selectedMembers.length === 0) {
                   Alert.alert('Error', 'Please select at least one member.');
@@ -525,7 +539,9 @@ export default function HomeScreen() {
                   setSplitItemsModalVisible(true);
                 }
               }}
-            />
+            >
+              <Text style={styles.nextButtonText}>Next: Select Items</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -538,8 +554,8 @@ export default function HomeScreen() {
         onRequestClose={() => setAddItemModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.editModalContent}>
-            <Text style={styles.modalTitle}>Add New Item</Text>
+          <View style={styles.addItemModalContent}>
+            <Text style={styles.modalTitle}>Add A New Item</Text>
             
             <TextInput
               style={styles.input}
@@ -732,6 +748,10 @@ export default function HomeScreen() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.editModalContent}>
+          <Text style={styles.modalTitle}>
+            {currentEditItem ? `Editing: ${currentEditItem.itemName}` : "Editing..."}
+          </Text>
+
             <TextInput
               style={styles.input}
               placeholder="Edit item name"
@@ -755,10 +775,24 @@ export default function HomeScreen() {
               value={editItemCost}
               onChangeText={setEditItemCost}
             />
-  
-            <View style={styles.buttonContainer}>
-              <Button title="Save" onPress={saveEdit} />
-              <Button title="Cancel" onPress={() => setEditModalVisible(false)} color="red" />
+            
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={() => {
+                  saveEdit
+                }}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper2}
+                onPress={() => {
+                  setEditModalVisible(false)
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -801,15 +835,13 @@ export default function HomeScreen() {
         onRequestClose={() => setCostModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.editModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Enter Item Cost</Text>
-              <Button title="Close" onPress={() => setCostModalVisible(false)} />
-            </View>
+          <View style={styles.costModalContent}>
+            <Text style={styles.modalTitle}>Enter Item Cost</Text>
+            
             <TextInput
               style={styles.input}
               placeholder="Enter item cost"
-
+              placeholderTextColor="#aaa"
               value={inputCost}
               onChangeText={setInputCost}
               keyboardType="numeric"
@@ -869,21 +901,14 @@ const styles = StyleSheet.create({
   },
   splitButton: {
     alignSelf: 'center',
-    backgroundColor: '#FF6347',
+    backgroundColor: '#008F7A',
     padding: 10,
     borderRadius: 4,
-    marginBottom: 10,
+    marginBottom: 0,
   },
   splitButtonText: {
+    fontFamily: "Avenir",
     color: '#fff',
-    fontWeight: 'bold',
-  },
-  filterButton: {
-    alignSelf: 'center',
-    backgroundColor: '#007BFF',
-    padding: 10,
-    borderRadius: 4,
-    marginBottom: 10,
   },
   filterButtonText: {
     color: '#fff',
@@ -892,14 +917,16 @@ const styles = StyleSheet.create({
   },
   addButton: {
     alignSelf: 'center',
-    backgroundColor: '#28a745',
+    backgroundColor: '#008F7A',
     padding: 10,
     borderRadius: 4,
-    marginBottom: 10,
+    marginBottom: 0,
   },
   addButtonText: {
+    fontFamily: "Avenir",
     color: '#fff',
-    fontWeight: 'bold',
+    padding: 0,
+    borderRadius: 8,
   },
   editButton: {
     padding: 10,
@@ -933,24 +960,67 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  filterButton: {
+    backgroundColor: "#6C757D",
+    padding: 10,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   // Input Fields
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
-    padding: 8,
-    marginBottom: 10,
-    borderRadius: 4,
+    padding: 10,
+    marginBottom: 6,
+    borderRadius: 5,
+    width: '90%',
+    alignSelf: 'center',
+    fontFamily: "Avenir",
   },
 
-  // List Items
+  // Shopping List Container
+  shoppingListContainer: {
+    width: "100%",
+    height: '90%',
+    backgroundColor: "#ECECEC",
+    padding: 15,
+    borderRadius: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    marginVertical: 10,
+  },
+  subtitleContainer: {
+    marginBottm: 20,
+    alignItems: 'flex-start',  
+  },
+  shoppingListHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15, // Space between header and list
+  },
+  shoppingListTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Avenir",
+    color: "#333",
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4, // Space between buttons
+  },
   listItem: {
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
     backgroundColor: '#f9f9f9',
     marginBottom: 5,
-    borderRadius: 4,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
@@ -961,12 +1031,15 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   itemName: {
+    fontFamily: "Avenir",
     fontWeight: 'bold',
   },
   addedByText: {
+    fontFamily: "Avenir",
     color: 'gray',
   },
   purchasedText: {
+    fontFamily: "Avenir",
     color: 'gray',
     textDecorationLine: 'line-through',
   },
@@ -985,9 +1058,33 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     margin: 20,
-    justifyContent: 'center',
-    height: '30%',
-    minHeight: 275,
+    elevation: 5, // Shadow for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  costModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    elevation: 5, // Shadow for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  addItemModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    elevation: 5, // Shadow for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   filterModalContent: {
     backgroundColor: '#fff',
@@ -1021,32 +1118,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    paddingTop: 10,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    fontFamily: "Avenir",
+    marginBottom: 10,
   },
   modalButtonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  actionButtonWrapper: {
-    backgroundColor: '#007BFF',
-    padding: 10,
-    borderRadius: 4,
-    flex: 1,
     alignItems: 'center',
-    marginRight: 5,
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 2,
+  },
+  actionButtonWrapper: { // Households exist
+    backgroundColor: "#008F7A",
+    flexDirection:'row',
+    padding: 11,
+    borderRadius: 8,
   },
   actionButtonWrapper2: {
-    backgroundColor: '#FF6347',
-    padding: 10,
-    borderRadius: 4,
-    flex: 1,
+    backgroundColor: "#DF0808",
+    flexDirection:'row',
+    padding: 11,
+    borderRadius: 8,
     alignItems: 'center',
-    marginLeft: 5,
+    justifyContent: 'center'
   },
   buttonText: {
     color: '#fff',
@@ -1066,12 +1164,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   dropdownPlaceholder: {
-    fontWeight: 'bold',
+    fontFamily: "Avenir",
     fontSize: 18,
     color: '#aaa',
   },
   dropdownText: {
-    fontWeight: 'bold',
+    fontFamily: "Avenir",
     fontSize: 18,
     color: '#333',
   },
@@ -1084,5 +1182,28 @@ const styles = StyleSheet.create({
   picker: {
     height: 150,
     width: '100%',
+  },
+
+  // Split the Bill
+  memberText: {
+    fontSize: 16,  // Adjust font size
+    fontFamily: 'Avenir', // Adjust font family
+    fontWeight: '500', // Adjust font weight
+    color: '#000', // Default color for unselected
+  },
+  memberTextSelected: {
+    color: '#fff', // Color for selected members
+  },
+  nextButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+  },
+
+  nextButtonText: {
+    fontFamily: 'Avenir', // Font family
+    fontSize: 16,         // Font size
+    fontWeight: 'bold',   // Font weight
+    color: '#007BFF',        // Text color
   },
 });
