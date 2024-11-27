@@ -29,6 +29,7 @@ export default function HomeScreen() {
   const [newItemName, setNewItemName] = useState('');  // String of new item name
   const [newItemCategory, setNewItemCategory] = useState(''); // String of new item category
   const [newItemCost, setNewItemCost] = useState(''); // String of new item cost
+  const [totalCost, setTotalCost] = useState(0);
 
   // Edit item states
   const [currentEditItem, setCurrentEditItem] = useState(null); // Object of item currently editing
@@ -42,6 +43,7 @@ export default function HomeScreen() {
   const [editModalVisible, setEditModalVisible] = useState(false); // Bool of modal visibility
   const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false); // Bool of modal visibility
   const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false); // Bool of modal visibility
+  const [showCustomAmountModal, setShowCustomAmountModal] = useState(false)
   const [costModalVisible, setCostModalVisible] = useState(false); // Bool of modal visibility
   const [addItemModalVisible, setAddItemModalVisible] = useState(false);
 
@@ -53,6 +55,7 @@ export default function HomeScreen() {
   const [selectedItems, setSelectedItems] = useState([]); // Array of strings of items IDs
   const [currentItemForCost, setCurrentItemForCost] = useState(null);
   const [inputCost, setInputCost] = useState('');
+  const [customAmounts, setCustomAmounts] = useState({});
 
   // Fetch the households associated with the user and automatically assign first one
   useEffect(() => {
@@ -240,9 +243,15 @@ export default function HomeScreen() {
   // Save edited item
   const saveEdit = async () => {
     if (!currentEditItem) return;
+    const cost = editItemCost.trim() ? parseFloat(editItemCost) : 0;
+
+    if (editItemCost.trim() && isNaN(cost)) {
+      Alert.alert('Error', 'Please enter a valid number for the item cost.');
+      return;
+    }
     try {
       const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentEditItem.id);
-      await updateDoc(itemRef, { itemName: editItemName, category: editItemCategory, cost: editItemCost });
+      await updateDoc(itemRef, { itemName: editItemName, category: editItemCategory, cost });
 
       setEditItemName('');
       setEditItemCategory('');
@@ -268,32 +277,56 @@ export default function HomeScreen() {
   
     console.log('Selected Items for Splitting:', selectedItems);
   
-    let totalCost = 0;
-  
+    
     // Use full item objects to calculate total cost
-    selectedItems.forEach((item) => {
-      const itemCost = item.cost !== undefined ? parseFloat(item.cost) : 0;
-      console.log(`Item: ${item.itemName || item.id}, Cost: ${itemCost}`);
-      totalCost += itemCost;
+    let calculatedCost = 0;
+
+  // Use full item objects to calculate total cost
+  selectedItems.forEach((item) => {
+    const itemCost = item.cost !== undefined ? parseFloat(item.cost) : 0;
+    console.log(`Item: ${item.itemName || item.id}, Cost: ${itemCost}`);
+    calculatedCost += itemCost;
+  });
+
+  setTotalCost(calculatedCost);
+
+  console.log('Total Cost:', totalCost);
+  const splitAmount = parseFloat((totalCost / (selectedMembers.length + 1)).toFixed(2));
+  console.log('Split Amount:', splitAmount);
+  
+    // Initialize customAmounts with default splitAmount
+    const currentUser = getCurrentUser(); // Replace with your method to get the current user
+    const allMembers = [...selectedMembers, currentUser];
+  
+    const initialCustomAmounts = {};
+    allMembers.forEach((member) => {
+      initialCustomAmounts[member.id] = splitAmount;
     });
   
-    console.log('Total Cost:', totalCost);
-    const splitAmount = parseFloat((totalCost / (selectedMembers.length + 1)).toFixed(2));
-    console.log('Split Amount:', splitAmount);
+    setCustomAmounts(initialCustomAmounts);
   
-    Alert.alert('Split Amount', `Each selected member owes: $${splitAmount.toFixed(2)}`);
+    // Show modal to assign custom amounts
+    setShowCustomAmountModal(true);
+  };
   
+  // Function to proceed with splitting the bill after custom amounts are set
+  const proceedWithSplitBill = async (totalCost) => {
     try {
-      await updateBalancesAfterSplit(selectedHouseholdID, selectedMembers, splitAmount, selectedItems);
-  
+      console.log("Function updated");
+      await updateBalancesAfterSplit(selectedHouseholdID, customAmounts, selectedItems);
+
+      console.log("Function updated");
       // Remove split items from the list after they are split
       for (const item of selectedItems) {
         await deleteItem(item.id);
+        console.log("Deleting item");
       }
   
       // Clear selected items and members after split to prevent them from being reused
       setSelectedItems([]);
+      console.log("Clear selected items");
       setSelectedMembers([]);
+      setCustomAmounts({});
     } catch (error) {
       console.error('Error updating balances:', error);
       Alert.alert('Error', 'Failed to record the split.');
@@ -321,7 +354,10 @@ export default function HomeScreen() {
     } else {
       try {
         const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
-        await updateDoc(itemRef, { isPurchased: !currentStatus });
+        await updateDoc(itemRef, {
+          isPurchased: !currentStatus,
+          purchasedDate: !currentStatus ? new Date() : null, // Add or clear purchasedDate
+        });  
       } catch (error) {
         Alert.alert('Error', 'Failed to update item status. Please try again.');
         console.error(error);
@@ -426,7 +462,7 @@ export default function HomeScreen() {
           } else if (householdMembers.length <= 1) {
             Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
           } else {
-            setSplitMembersModalVisible(true); // only open Split Bill modal if there are other members to split with
+            setSplitMembersModalVisible(true);
           }
         }}
       >
@@ -451,13 +487,12 @@ export default function HomeScreen() {
           <View style={styles.splitModalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
-              
               <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
             </View>
-
+  
             <FlatList
-              data={householdMembers.filter(member => member.uid !== auth.currentUser.uid)} // exclude current user so cannot split with themselves
-              keyExtractor={(item) => item.uid} // Use `uid` as the key
+              data={householdMembers.filter((member) => member.uid !== auth.currentUser.uid)}
+              keyExtractor={(item) => item.uid}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={{
@@ -467,27 +502,27 @@ export default function HomeScreen() {
                     marginBottom: 5,
                   }}
                   onPress={() => {
-                    setSelectedMembers(prevSelected =>
+                    setSelectedMembers((prevSelected) =>
                       prevSelected.includes(item.uid)
-                        ? prevSelected.filter(member => member !== item.uid)
+                        ? prevSelected.filter((member) => member !== item.uid)
                         : [...prevSelected, item.uid]
                     );
                   }}
                 >
                   <Text style={{ color: selectedMembers.includes(item.uid) ? '#fff' : '#000' }}>
-                    {item.name} {/* Display the member's name */}
+                    {item.name}
                   </Text>
                 </TouchableOpacity>
               )}
             />
-
+  
             <Button
               title="Next: Select Items"
               onPress={() => {
                 if (selectedMembers.length === 0) {
                   Alert.alert('Error', 'Please select at least one member.');
                 } else {
-                  setSplitItemsModalVisible(true);  // Correctly set the visibility of the items modal
+                  setSplitItemsModalVisible(true);
                 }
               }}
             />
@@ -557,7 +592,7 @@ export default function HomeScreen() {
 
       {/* Modal for selecting items to split */}
       <Modal
-        visible={splitItemsModalVisible}  // Use the items modal visibility state
+        visible={splitItemsModalVisible}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setSplitItemsModalVisible(false)}
@@ -568,10 +603,9 @@ export default function HomeScreen() {
               <Text style={styles.modalTitle}>Select Items to Split</Text>
               <Button title="Close" onPress={() => setSplitItemsModalVisible(false)} />
             </View>
-
-            {/* Display list of items */}
+  
             <FlatList
-              data={shoppingListItems.filter((item) => item.isPurchased)} // exclude checked off items
+              data={shoppingListItems.filter((item) => item.isPurchased)}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -582,9 +616,9 @@ export default function HomeScreen() {
                     marginBottom: 5,
                   }}
                   onPress={() => {
-                    setSelectedItems(prevSelected =>
+                    setSelectedItems((prevSelected) =>
                       prevSelected.includes(item.id)
-                        ? prevSelected.filter(i => i !== item.id)
+                        ? prevSelected.filter((i) => i !== item.id)
                         : [...prevSelected, item.id]
                     ), toggleItemSelection(item);
                   }}
@@ -595,18 +629,100 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               )}
             />
-            
+  
             <Button
-              title="Confirm Split"
+              title="Next: Assign Custom Amounts"
               onPress={() => {
-                splitBill();
-                setSplitItemsModalVisible(false);  // Correctly close the items modal
+                if (selectedItems.length === 0) {
+                  Alert.alert('Error', 'Please select at least one item.');
+                } else {
+                  splitBill(); // Initializes customAmounts and shows the custom amount modal
+                  setShowCustomAmountModal(true);
+                }
               }}
             />
           </View>
         </View>
       </Modal>
-
+  
+      {/* Modal for assigning custom amounts */}
+      <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showCustomAmountModal}
+          onRequestClose={() => {
+            setShowCustomAmountModal(false);
+          }}
+        >
+          <View style={styles.modalContainer}>
+          <View style={styles.splitModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Assign Custom Amount</Text>
+              <Button title="Close" onPress={() => setShowCustomAmountModal(false)} />
+            </View>
+  
+            <FlatList
+              data={[...selectedMembers, auth.currentUser.uid]}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => {
+                const memberName =
+                  householdMembers.find((member) => member.uid === item)?.name || 'You';
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={{ flex: 1 }}>{memberName}</Text>
+                    <TextInput
+                      style={{ borderWidth: 1, padding: 5, width: 100 }}
+                      keyboardType="numeric"
+                      value={customAmounts[item] || ''}
+                      onChangeText={(value) => {
+                        const newAmounts = { ...customAmounts };
+                        newAmounts[item] = value; // Store raw input
+                        setCustomAmounts(newAmounts);
+                      }}
+                    />
+                  </View>
+                );
+              }}
+            />
+  
+            <Button
+              title="Confirm Split"
+              onPress={() => {
+                const parsedAmounts = {};
+                let invalidInput = false;
+                Object.keys(customAmounts).forEach((key) => {
+                const amount = parseFloat(customAmounts[key]);
+                  if (isNaN(amount)) {
+                    Alert.alert('Error', 'Please enter valid numeric amounts.');
+                    return;
+                  } else {
+                    parsedAmounts[key] = amount;
+                  }
+                });
+                const totalAssigned = Object.values(parsedAmounts).reduce(
+                  (sum, amount) => sum + amount,
+                  0
+                );
+            
+                // Check if the total assigned matches the total cost
+                if (Math.abs(totalAssigned - totalCost) > 0.01) {
+                  // Show an error if the amounts don't match
+                  Alert.alert(
+                    'Error',
+                    `The assigned amounts (${totalAssigned.toFixed(2)}) must equal the total cost (${totalCost.toFixed(2)}).`
+                  );
+                } else {
+                  setShowCustomAmountModal(false);
+                  proceedWithSplitBill(totalCost);
+                }
+                
+              }}
+            />
+          </View>
+          </View>
+        </Modal>
+      
+  
       {/* Modal for editing items */}
       <Modal
         visible={editModalVisible}
@@ -623,7 +739,7 @@ export default function HomeScreen() {
               value={editItemName}
               onChangeText={setEditItemName}
             />
-
+  
             <TextInput
               style={styles.input}
               placeholder="Edit category"
@@ -631,7 +747,7 @@ export default function HomeScreen() {
               value={editItemCategory}
               onChangeText={setEditItemCategory}
             />
-
+  
             <TextInput
               style={styles.input}
               placeholder="Edit cost"
@@ -639,7 +755,7 @@ export default function HomeScreen() {
               value={editItemCost}
               onChangeText={setEditItemCost}
             />
-
+  
             <View style={styles.buttonContainer}>
               <Button title="Save" onPress={saveEdit} />
               <Button title="Cancel" onPress={() => setEditModalVisible(false)} color="red" />
@@ -647,7 +763,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-
+  
       {/* Modal for filter selection */}
       <Modal
         visible={filterModalVisible}
@@ -662,7 +778,7 @@ export default function HomeScreen() {
               <Text style={styles.modalTitle}>Select a Category</Text>
               <Button title="Close" onPress={() => setFilterModalVisible(false)} />
             </View>
-
+  
             <Picker
               selectedValue={selectedCategory}
               onValueChange={(itemValue) => filterListByCategory(itemValue)}
@@ -730,6 +846,7 @@ export default function HomeScreen() {
       </Modal>
     </View>
   );
+  
 }
 
 const styles = StyleSheet.create({

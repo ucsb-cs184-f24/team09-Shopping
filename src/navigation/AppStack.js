@@ -5,6 +5,7 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HouseholdStack from './HouseholdStack';
 import BalancesScreen from '../screens/BalancesScreen';
+import SummaryScreen from '../screens/SummaryScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,6 +22,8 @@ export default function App() {
                         iconName = 'home';
                     } else if (route.name === 'Balances') {
                         iconName = 'wallet';
+                    } else if (route.name === 'Summary') {
+                        iconName = 'bar-chart';
                     } else if (route.name ==='Profile') {
                         iconName = 'person-circle';
                     }
@@ -51,6 +54,14 @@ export default function App() {
                 }}
             />
             <Tab.Screen name="Balances" component={BalancesScreen} />
+            <Tab.Screen 
+                name="Summary" 
+                component={SummaryScreen} 
+                options={{ 
+                    title: 'Summary',
+                    tabBarLabel: 'Summary',
+                }} 
+            />
             <Tab.Screen name="Profile" component={ProfileScreen}
                 options={{ 
                     headerShown: false,
