@@ -40,7 +40,11 @@ export default function App() {
                 },
             })}
         >
-            <Tab.Screen name="Shopping Lists" component={HomeScreen} />
+            <Tab.Screen name="Shopping Lists" component={HomeScreen} 
+                options={{ 
+                    headerShown: false,
+                }}
+            />
             <Tab.Screen name= "Households" component={HouseholdStack} 
                 options={{ 
                     headerShown: false,

@@ -5,6 +5,7 @@ import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, quer
 import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import DropDownPicker from 'react-native-dropdown-picker';
 import { updateBalancesAfterSplit } from './BalancesScreen'; 
 
 // TODO (COMPLETE): remove items from list of respective household when user leaves group
@@ -39,18 +40,19 @@ export default function HomeScreen() {
   // Modal states
   const [filterModalVisible, setFilterModalVisible] = useState(false); // Bool of modal visibility
   const [editModalVisible, setEditModalVisible] = useState(false); // Bool of modal visibility
-  const [householdModalVisible, setHouseholdModalVisible] = useState(false); // Bool of modal visibility
-  const [splitModalVisible, setSplitModalVisible] = useState(false); // Bool of modal visibility
   const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false); // Bool of modal visibility
   const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false); // Bool of modal visibility
   const [costModalVisible, setCostModalVisible] = useState(false); // Bool of modal visibility
+  const [addItemModalVisible, setAddItemModalVisible] = useState(false);
 
-  const [currentItemForCost, setCurrentItemForCost] = useState(null);
-  const [inputCost, setInputCost] = useState('');
+  // Dropdown picker states
+  const [selectHouseHoldDropdown, setSelectHouseHoldDropdown] = useState(false);
 
   // Split bill states
   const [selectedMembers, setSelectedMembers] = useState([]); // Array of strings of household members IDs
   const [selectedItems, setSelectedItems] = useState([]); // Array of strings of items IDs
+  const [currentItemForCost, setCurrentItemForCost] = useState(null);
+  const [inputCost, setInputCost] = useState('');
 
   // Fetch the households associated with the user and automatically assign first one
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function HomeScreen() {
 
   // Listen for changes in items of shopping list
   useEffect(() => {
-    if (!shoppingListMeta) {
+    if (!selectedHouseholdID | !shoppingListMeta) {
       setShoppingListItems([]);
       setCategories([]);
       return;
@@ -121,7 +123,7 @@ export default function HomeScreen() {
     });
   
     return () => unsubscribe();
-  }, [shoppingListMeta]);
+  }, [selectedHouseholdID, shoppingListMeta]);
   
   // Filter the shopping list based on the selected category
   const filterListByCategory = (category) => {
@@ -327,57 +329,37 @@ export default function HomeScreen() {
     }
   };
 
-  const selectHousehold = (householdId) => {
-    setSelectedHouseholdID(householdId);
-    
+  const selectHousehold = (householdId) => {    
     // Find the name of the selected household
     const household = households.find(h => h.id === householdId);
     if (household) {
-      setSelectedHouseholdName(household.displayHouseholdName || 'Unnamed Household');
+      setSelectedHouseholdName(household.displayHouseholdName);
     }
-
-    setHouseholdModalVisible(false);
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.selectedHouseholdText}>
-        {selectedHouseholdName ? `Current Household: ${selectedHouseholdName}` : 'No household selected'}
-      </Text>
-
-      <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
-        <Text style={styles.householdButtonText}>
-          Select Household
-        </Text>
-      </TouchableOpacity>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Add a new item..."
-        value={newItemName}
-        onChangeText={setNewItemName}
+    <View style={styles.container}>      
+      <DropDownPicker
+        open={selectHouseHoldDropdown}
+        value={selectedHouseholdID}
+        items={households.map(household => ({
+          label: household.displayHouseholdName,
+          value: household.id,
+        }))}
+        setOpen={setSelectHouseHoldDropdown}
+        setValue={setSelectedHouseholdID}
+        placeholder="Select a Household"
+        onChangeValue={(value) => {
+          if (value) {
+            selectHousehold(value);
+          }
+        }}
+        style={styles.dropdown}
+        textStyle={styles.dropdownText}
+        dropDownContainerStyle={styles.dropdownContainer}
+        placeholderStyle={styles.dropdownPlaceholder}
       />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Add item category..."
-        value={newItemCategory}
-        onChangeText={setNewItemCategory}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Add item cost (Optional)"
-        value={newItemCost}
-        onChangeText={setNewItemCost}
-      />
-
-      <Button title="Add Item" onPress={addItemToList} />
-
-      <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
-        <Text style={styles.filterButtonText}>Filter</Text>
-      </TouchableOpacity>
-      
       <FlatList
         data={filteredShoppingListItems}
         keyExtractor={(item) => item.id}
@@ -389,8 +371,9 @@ export default function HomeScreen() {
                   style={styles.editButton}
                   onPress={() => openEditModal(item)}
                 >
-                  <Text style={styles.actionText}>Edit</Text>
+                  <Text style={styles.buttonText}>Edit</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => deleteItem(item.id)}
@@ -429,6 +412,10 @@ export default function HomeScreen() {
         )}
       />
 
+      <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+        <Text style={styles.filterButtonText}>Filter</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.splitButton}
         onPress={() => {
@@ -444,6 +431,13 @@ export default function HomeScreen() {
         }}
       >
         <Text style={styles.splitButtonText}>Split the Bill</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setAddItemModalVisible(true)}
+      >
+        <Text style={styles.addButtonText}>Add Item</Text>
       </TouchableOpacity>
 
       {/* Modal for selecting members to split */}
@@ -497,6 +491,66 @@ export default function HomeScreen() {
                 }
               }}
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Item Modal */}
+      <Modal
+        visible={addItemModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setAddItemModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.editModalContent}>
+            <Text style={styles.modalTitle}>Add New Item</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item name"
+              placeholderTextColor="#aaa"
+              value={newItemName}
+              onChangeText={setNewItemName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item category"
+              placeholderTextColor="#aaa"
+              value={newItemCategory}
+              onChangeText={setNewItemCategory}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item cost (Optional)"
+              placeholderTextColor="#aaa"
+              value={newItemCost}
+              onChangeText={setNewItemCost}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={() => {
+                  addItemToList();
+                  setAddItemModalVisible(false);
+                }}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper2}
+                onPress={() => {
+                  setAddItemModalVisible(false);
+                  setNewItemName('');
+                  setNewItemCategory('');
+                  setNewItemCost('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -565,6 +619,7 @@ export default function HomeScreen() {
             <TextInput
               style={styles.input}
               placeholder="Edit item name"
+              placeholderTextColor="#aaa"
               value={editItemName}
               onChangeText={setEditItemName}
             />
@@ -572,6 +627,7 @@ export default function HomeScreen() {
             <TextInput
               style={styles.input}
               placeholder="Edit category"
+              placeholderTextColor="#aaa"
               value={editItemCategory}
               onChangeText={setEditItemCategory}
             />
@@ -579,6 +635,7 @@ export default function HomeScreen() {
             <TextInput
               style={styles.input}
               placeholder="Edit cost"
+              placeholderTextColor="#aaa"
               value={editItemCost}
               onChangeText={setEditItemCost}
             />
@@ -611,36 +668,9 @@ export default function HomeScreen() {
               onValueChange={(itemValue) => filterListByCategory(itemValue)}
               style={styles.picker}
             >
-              <Picker.Item label="No Filter" value="" />
+              <Picker.Item label="No Filter" value="" color="#000" />
               {categories.map((category, index) => (
-                <Picker.Item key={index} label={category} value={category} />
-              ))}
-            </Picker>
-          </View>
-        </View>
-      </Modal>
-      
-      {/* Modal for selecting a household */}
-      <Modal visible={householdModalVisible} animationType="slide" transparent={true} onRequestClose={() => setHouseholdModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.filterModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select a Household</Text>
-              <Button title="Close" onPress={() => setHouseholdModalVisible(false)} />
-            </View>
-
-            <Picker
-              selectedValue={selectedHouseholdID}
-              onValueChange={(itemValue) => selectHousehold(itemValue)}
-              style={styles.picker}
-            >
-              {households.map((household) => (
-                <Picker.Item
-                  key={household.id}
-                  label={household.displayHouseholdName || "Unnamed Household"}
-                  value={household.id}
-                  color="#000"
-                />
+                <Picker.Item key={index} label={category} value={category} color="#000" />
               ))}
             </Picker>
           </View>
@@ -663,6 +693,7 @@ export default function HomeScreen() {
             <TextInput
               style={styles.input}
               placeholder="Enter item cost"
+
               value={inputCost}
               onChangeText={setInputCost}
               keyboardType="numeric"
@@ -702,137 +733,56 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Main Container
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 55,
     backgroundColor: '#fff',
-    paddingTop: 40,
+    width: '100%',
   },
+
+  // Buttons
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     padding: 10,
     marginTop: 10,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 8,
-    marginBottom: 10,
-    borderRadius: 4,
-  },
-  listItem: {
+  splitButton: {
+    alignSelf: 'center',
+    backgroundColor: '#FF6347',
     padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    backgroundColor: '#f9f9f9',
-    marginBottom: 5,
     borderRadius: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 10,
   },
-  textContainer: {
-    flexDirection: 'column',
-    flex: 1,
-    marginRight: 10,
-  },
-  purchasedText: {
-    color: 'gray',
-    textDecorationLine: 'line-through',
-  },
-  radioButton: {
-    padding: 5,
-  },
-  itemName: {
+  splitButtonText: {
+    color: '#fff',
     fontWeight: 'bold',
-  },
-  selectedHouseholdText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginVertical: 10,
-  },  
-  addedByText: {
-    color: 'gray',
   },
   filterButton: {
-    alignSelf: 'flex-end',
+    alignSelf: 'center',
     backgroundColor: '#007BFF',
     padding: 10,
     borderRadius: 4,
+    marginBottom: 10,
   },
   filterButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 16,
   },
-  householdButton: {
-    alignSelf: 'flex-end',
+  addButton: {
+    alignSelf: 'center',
     backgroundColor: '#28a745',
     padding: 10,
     borderRadius: 4,
     marginBottom: 10,
   },
-  householdButtonText: {
+  addButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  editModalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    margin: 20,
-    justifyContent: 'center',
-    height: '30%',
-    minHeight: 275,
-  },
-  filterModalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    height: '38%',
-    borderRadius: 15,
-    marginHorizontal: 20,
-    marginVertical: 50,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5, // Android shadow
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingTop: 10,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  closeButtonContainer: {
-    paddingLeft: 10,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: 5,
-    marginTop: 10,
-  },
-  picker: {
-    height: 150,
-    width: '100%',
   },
   editButton: {
     padding: 10,
@@ -866,16 +816,74 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  splitButton: {
-    alignSelf: 'center',
-    backgroundColor: '#FF6347',
-    padding: 10,
-    borderRadius: 4,
+
+  // Input Fields
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 8,
     marginBottom: 10,
+    borderRadius: 4,
   },
-  splitButtonText: {
-    color: '#fff',
+
+  // List Items
+  listItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    backgroundColor: '#f9f9f9',
+    marginBottom: 5,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  textContainer: {
+    flexDirection: 'column',
+    flex: 1,
+    marginRight: 10,
+  },
+  itemName: {
     fontWeight: 'bold',
+  },
+  addedByText: {
+    color: 'gray',
+  },
+  purchasedText: {
+    color: 'gray',
+    textDecorationLine: 'line-through',
+  },
+  radioButton: {
+    padding: 5,
+  },
+  
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  editModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    justifyContent: 'center',
+    height: '30%',
+    minHeight: 275,
+  },
+  filterModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    height: '38%',
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5, // Android shadow
   },
   splitModalContent: {
     backgroundColor: '#fff',
@@ -891,11 +899,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4, // shadow for IOS
     elevation: 5, // shadow for android
   },
-  noHouseholdsText: {
-    fontSize: 16,
-    color: '#777',
-    textAlign: 'center',
-    marginTop: 10,
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingTop: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   modalButtonContainer: {
     flexDirection: 'row',
@@ -925,5 +938,34 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  
+  // Dropdown
+  dropdown: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  dropdownPlaceholder: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    color: '#aaa',
+  },
+  dropdownText: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    color: '#333',
+  },
+  dropdownContainer: {
+    borderColor: '#ddd',
+    borderRadius: 8,
+  },
+  
+  // Picker
+  picker: {
+    height: 150,
+    width: '100%',
   },
 });
