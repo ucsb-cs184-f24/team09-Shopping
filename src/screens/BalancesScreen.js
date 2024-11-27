@@ -4,17 +4,20 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import { collection, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 // Function to update balances after splitting the bill
-export const updateBalancesAfterSplit = async (selectedHouseholdID, selectedMembers, splitAmount, itemsDetails) => {
+export const updateBalancesAfterSplit = async (selectedHouseholdID, customAmounts, itemsDetails) => { 
   try {
     const userId = auth.currentUser.uid;
-    for (let member of selectedMembers) {
-      if (member !== userId) {
-        // Create a new document for each transaction instead of updating existing one
+
+    for (const [memberId, amount] of Object.entries(customAmounts)) {
+      
+      if (memberId !== userId) {
+        console.log("Member Id is " + memberId + " " + amount + "\n");
+        // Create a new document for each transaction
         const newTransactionRef = doc(collection(db, `households/${selectedHouseholdID}/balances`));
         await setDoc(newTransactionRef, {
-          owedBy: member,
+          owedBy: memberId,
           owedTo: userId,
-          amount: splitAmount,
+          amount: amount,
           repaymentAmount: 0, // initalize repayment amount to 0
           repayments: [],
           itemsDetails: itemsDetails,
@@ -29,7 +32,6 @@ export const updateBalancesAfterSplit = async (selectedHouseholdID, selectedMemb
   }
 };
 
-// TODO: CURRENTLY RECORD PAYMENT SUBTRACTS FROM ALL ITEMS USER OWES, NEED TO CHANGE TO WHERE IT ONLY SUBTRACTS FROM TOTAL DEBTS OWED
 // Main BalancesScreen component
 export default function BalancesScreen() {
   const [households, setHouseholds] = useState([]);
@@ -634,6 +636,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
+    fontFamily: "Avenir",
     textAlign: 'center',
     color: '#003366',
     marginBottom: 20,
@@ -665,6 +668,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontWeight: 'bold',
     fontSize: 16,
+    fontFamily: "Avenir",
     color: '#333',
   },
   itemsDetailsContainer: {
@@ -674,6 +678,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     marginLeft: 10,
+    fontFamily: "Avenir",
   },
   noHouseholdSelectedText: {
     fontSize: 16,
@@ -683,7 +688,7 @@ const styles = StyleSheet.create({
   },
   recordPaymentButton: {
     alignSelf: 'center',
-    backgroundColor: '#007BFF',
+    backgroundColor: '#008F7A',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
