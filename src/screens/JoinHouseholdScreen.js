@@ -4,10 +4,8 @@ import { collection, query, where, getDocs, updateDoc, arrayUnion, getDoc, doc }
 import { db, auth } from '../../firebaseConfig';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFocusEffect } from '@react-navigation/native';
-//import { BarCodeScanner } from 'expo-barcode-scanner';
 import { CameraView, Camera } from 'expo-camera';
-
-// TODO (COMPLETE): change formatting of button for better UI
+import { Ionicons } from '@expo/vector-icons';
 
 export default function JoinHouseholdScreen({ navigation }) {
     const [householdCode, setHouseholdCode] = useState('');
@@ -133,10 +131,14 @@ export default function JoinHouseholdScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Icon name="arrow-back" size={24} color="#000" />
-                <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
+            <View style={styles.headerContainer}>
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                    <Ionicons name="chevron-back-outline" size={24} color="#000" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setScannerVisible(true)}>
+                    <Text style={styles.qrButtonText}>Scan QR Code</Text>
+                </TouchableOpacity> 
+            </View>
             <Text style={styles.title}>Join a Household</Text>
             <TextInput
                 style={styles.input}
@@ -145,12 +147,11 @@ export default function JoinHouseholdScreen({ navigation }) {
                 onChangeText={setHouseholdCode}
             />
             {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-            <View style={styles.buttonWrapper}>
-                <Button title="Join Household" onPress={joinHouseholdCode} />
-            </View>
-            <TouchableOpacity style={styles.qrButton} onPress={() => setScannerVisible(true)}>
-                <Text style={styles.qrButtonText}>Scan QR Code</Text>
+
+            <TouchableOpacity style={styles.buttonWrapper} onPress={joinHouseholdCode}>
+                <Text style={styles.joinHouseText}>Join Household</Text>
             </TouchableOpacity>
+
             <Modal
                 visible={scannerVisible}
                 animationType="slide"
@@ -187,21 +188,25 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
+        backgroundColor: 'white'
     },
-    backButton: {
+    headerContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
+        width: '95%',
+        justifyContent: "space-between",
         position: 'absolute',
-        top: 40,
-        left: 20,
+        top: 75,
     },
-    backButtonText: {
+    qrButtonText: {
+        color: "#008F7A",
+        fontFamily: 'Avenir',
+        fontWeight: 'bold',
         fontSize: 16,
-        marginLeft: 5,
     },
     title: {
         fontSize: 24,
         marginBottom: 20,
+        fontFamily: 'Avenir'
     },
     input: {
         borderWidth: 1,
@@ -210,16 +215,26 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         borderRadius: 5,
         width: '90%',
+        fontFamily: 'Avenir'
     },
     error: {
         color: 'red',
         marginBottom: 20,
+        fontFamily: 'Avenir'
     },
     buttonWrapper: {
-        width: '100%',
+        width: '90%',
         marginBottom: 15,
-        borderRadius: 25,
+        borderRadius: 8,
+        backgroundColor: "#008F7A",
         overflow: 'hidden',
+        alignItems: 'center',
+        padding: 10
+    },
+    joinHouseText: {
+        color: "white",
+        fontFamily: 'Avenir',
+        fontWeight: 'bold'
     },
     scannerContainer: {
         flex: 1,
@@ -232,40 +247,22 @@ const styles = StyleSheet.create({
         bottom: 20,
         width: '80%',
     },
-    qrButton: {
-    marginTop: 10, // Adds spacing from the "Join Household" button
-    backgroundColor: '#28a745', // Green background for differentiation
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-    shadowColor: '#000', // Optional shadow for elevation effect
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5, // Android shadow effect
-    },
-    qrButtonText: {
-    color: '#fff', // White text for contrast
-    fontWeight: 'bold',
-    fontSize: 16,
-    },
     closeButton: {
-    backgroundColor: '#FF6347', // Tomato color for a noticeable button
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 10,
-    shadowColor: '#000', // Optional shadow for elevation
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5, // Android shadow effect
+        backgroundColor: '#DF0808',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 5,
     },
     closeButtonText: {
-        color: '#fff', // White text for contrast
+        color: '#fff',
         fontWeight: 'bold',
         fontSize: 16,
     },
