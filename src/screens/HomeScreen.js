@@ -681,11 +681,13 @@ export default function HomeScreen() {
               data={[...selectedMembers, auth.currentUser.uid]}
               keyExtractor={(item) => item}
               renderItem={({ item }) => {
-                const memberName =
-                  householdMembers.find((member) => member.uid === item)?.name || 'You';
+                const isCurrentUser = item === auth.currentUser.uid;
+                const member = householdMembers.find((member) => member.uid === item);
+                const memberName = member ? member.name : 'Unknown User';
+                const displayName = isCurrentUser ? `${memberName} (You)` : memberName;
                 return (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={{ flex: 1 }}>{memberName || ''}</Text>
+                    <Text style={{ flex: 1 }}>{displayName}</Text>
                     <TextInput
                       style={{ borderWidth: 1, padding: 5, width: 100 }}
                       keyboardType="numeric"
