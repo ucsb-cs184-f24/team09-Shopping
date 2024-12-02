@@ -41,6 +41,7 @@
     "react-native-screens": "~4.2.0",
     "react-native-svg": "15.9.0",
     "react-native-vector-icons": "^10.2.0",
+    "react-native-webview": "^13.12.4",
     "uuid": "^11.0.3"
   },
   "devDependencies": {
