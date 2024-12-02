@@ -1,4 +1,3 @@
-// src/navigation/HouseholdStack.js
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import CreateHouseholdScreen from '../screens/CreateHouseholdScreen';

@@ -5,8 +5,8 @@ import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, quer
 import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+import DropDownPicker from 'react-native-dropdown-picker';
 import { updateBalancesAfterSplit } from './BalancesScreen'; 
-
 
 // TODO (COMPLETE): remove items from list of respective household when user leaves group
 // TODO (COMPLETE): do not allow split bill on checked off items
@@ -16,7 +16,7 @@ export default function HomeScreen() {
   // Household states
   const [households, setHouseholds] = useState([]); // Array of household objects that user is part of
   const [selectedHouseholdID, setSelectedHouseholdID] = useState('');  // String of ID of selected household
-  const [selectedHouseholdName, setSelectedHouseholdName] = useState(''); // NEW: Name of selected household
+  const [selectedHouseholdName, setSelectedHouseholdName] = useState(''); // Sting of name of selected household
   const [householdMembers, setHouseholdMembers] = useState([]); // Array of objects of users within a household
 
   // Shopping list states
@@ -41,19 +41,21 @@ export default function HomeScreen() {
   // Modal states
   const [filterModalVisible, setFilterModalVisible] = useState(false); // Bool of modal visibility
   const [editModalVisible, setEditModalVisible] = useState(false); // Bool of modal visibility
-  const [householdModalVisible, setHouseholdModalVisible] = useState(false); // Bool of modal visibility
-  const [splitModalVisible, setSplitModalVisible] = useState(false); // Bool of modal visibility
   const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false); // Bool of modal visibility
   const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false); // Bool of modal visibility
   const [showCustomAmountModal, setShowCustomAmountModal] = useState(false)
   const [costModalVisible, setCostModalVisible] = useState(false); // Bool of modal visibility
+  const [addItemModalVisible, setAddItemModalVisible] = useState(false);
 
-  const [currentItemForCost, setCurrentItemForCost] = useState(null);
-  const [inputCost, setInputCost] = useState('');
+  // Dropdown picker states
+  const [selectHouseHoldDropdown, setSelectHouseHoldDropdown] = useState(false);
 
   // Split bill states
   const [selectedMembers, setSelectedMembers] = useState([]); // Array of strings of household members IDs
   const [selectedItems, setSelectedItems] = useState([]); // Array of strings of items IDs
+  const [currentItemForCost, setCurrentItemForCost] = useState(null);
+  const [inputCost, setInputCost] = useState('');
+  const [customAmounts, setCustomAmounts] = useState({});
 
   // Fetch the households associated with the user and automatically assign first one
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function HomeScreen() {
       if (userHouseholds.length > 0 && !selectedHouseholdID) {
         const defaultHousehold = userHouseholds[0];
         setSelectedHouseholdID(defaultHousehold.id);
-        setSelectedHouseholdName(defaultHousehold.displayHouseholdName || 'Unnamed Household');
+        setSelectedHouseholdName(defaultHousehold.displayHouseholdName);
       }
       else {
         // If there are no households, clear the selected household
@@ -82,40 +84,6 @@ export default function HomeScreen() {
 
     return () => unsubscribe();
   }, []);
-  
-
-
-  // Select household by updating householdId
-  const selectHousehold = (householdId) => {
-    if (householdId && households.some(h => h.id === householdId)) {
-      setSelectedHouseholdID(householdId);
-    } else {
-      setSelectedHouseholdID('');
-      setShoppingListMeta(null);
-      setShoppingListItems([]);
-    }
-    setHouseholdModalVisible(false);
-  };
-  // Listen for changes in shopping list meta data
-  useEffect(() => {
-    if (!selectedHouseholdID) {
-      setShoppingListMeta(null);
-      return;
-    }
-    const q = collection(db, `households/${selectedHouseholdID}/shoppingLists`);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const shoppingLists = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      // Get first shopping list metadata (shoppingLists[0])
-      const defaultShoppingListMeta = shoppingLists[0];
-      setShoppingListMeta(defaultShoppingListMeta);
-    });
-    return () => unsubscribe();
-  }, [selectedHouseholdID]);
-
-
 
   // Listen for changes in shopping list meta data
   useEffect(() => {
@@ -135,23 +103,18 @@ export default function HomeScreen() {
     });
     return () => unsubscribe();
   }, [selectedHouseholdID]);
-
-
 
   // Listen for changes in items of shopping list
-useEffect(() => {
-    if (!selectedHouseholdID || !shoppingListMeta) {
+  useEffect(() => {
+    if (!selectedHouseholdID | !shoppingListMeta) {
       setShoppingListItems([]);
       setCategories([]);
       return;
     }
   
-    const itemsRef = collection(
-      db,
-      `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
-    );
-    const unsubscribe = onSnapshot(itemsRef, (itemsSnapshot) => {
-      const items = itemsSnapshot.docs.map((doc) => ({
+    const q = collection(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
@@ -164,8 +127,6 @@ useEffect(() => {
   
     return () => unsubscribe();
   }, [selectedHouseholdID, shoppingListMeta]);
-
-
   
   // Filter the shopping list based on the selected category
   const filterListByCategory = (category) => {
@@ -186,142 +147,80 @@ useEffect(() => {
   
   // Fetch members if selected household changes
   useEffect(() => {
-    const fetchHouseholdMembers = async () => {
-      if (!selectedHouseholdID) {
-        setHouseholdMembers([]);
-        return;
-      }
-
-      try {
-        const householdDocRef = doc(db, 'households', selectedHouseholdID);
-        const householdDoc = await getDoc(householdDocRef);
-
-        const members = householdDoc.data().members;
-        const membersInfo = await Promise.all(
-          members.map(async (uid) => {
-            try {
-              const userDocRef = doc(db, 'users', uid);
-              const userDoc = await getDoc(userDocRef);
-              if (userDoc.exists()) {
-                return { uid, name: userDoc.data().name };
-              }
-              else {
-                console.warn(`No user found with UID: ${uid}`);
-              }
-            } catch (error) {
-              console.error(`Failed to fetch user with UID: ${uid}`, error);
+    if (!selectedHouseholdID) {
+      setHouseholdMembers([]);
+      return;
+    }
+  
+    const householdDocRef = doc(db, 'households', selectedHouseholdID);
+  
+    const unsubscribe = onSnapshot(householdDocRef, async (snapshot) => {
+      const members = snapshot.data().members;
+  
+      const membersInfo = await Promise.all(
+        members.map(async (uid) => {
+          try {
+            const userDocRef = doc(db, 'users', uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              return { uid, name: userDoc.data().name };
+            } else {
+              console.warn(`No user found with UID: ${uid}`);
             }
-            return null;
-          })
-        );
+          } catch (error) {
+            console.error(`Failed to fetch user with UID: ${uid}`, error);
+          }
+          return null;
+        })
+      );
+  
+      // Update the state with filtered members info
+      setHouseholdMembers(membersInfo.filter(info => info !== null));
+    });
+  
+    // Cleanup listener when the component unmounts or household changes
+    return () => unsubscribe();
+  }, [selectedHouseholdID]);  
 
-        setHouseholdMembers(membersInfo.filter(info => info !== null));
-      } catch (error) {
-        console.error("Error fetching household:", error);
-      }
+  // Add a new item to Firestore
+  const addItemToList = async () => {
+    if (!selectedHouseholdID) {
+      Alert.alert('Error', 'Please select a household with an active shopping list before adding items.');
+      return;
+    }
+
+    if (newItemName.trim() === '' || newItemCategory.trim() === '') {
+      Alert.alert('Error', 'Please enter an item name and its category');
+      return;
+    }
+
+    const newItemObj = {
+      itemName: newItemName,
+      category: newItemCategory,
+      cost: newItemCost ? parseFloat(newItemCost) : 0,
+      addedBy: auth.currentUser.email,
+      isPurchased: false,
+      addedDate: new Date(),
     };
 
-    fetchHouseholdMembers();
-  }, [selectedHouseholdID]);
+    try {
+      const itemsRef = collection(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`);
+      await addDoc(itemsRef, newItemObj);
 
-
-
-    // Fetch members if selected household changes
-    useEffect(() => {
-      const fetchHouseholdMembers = async () => {
-        if (!selectedHouseholdID) {
-          setHouseholdMembers([]);
-          return;
-        }
-        try {
-          const householdDocRef = doc(db, 'households', selectedHouseholdID);
-          const householdDoc = await getDoc(householdDocRef);
-          const members = householdDoc.data().members;
-          const membersInfo = await Promise.all(
-            members.map(async (uid) => {
-              try {
-                const userDocRef = doc(db, 'users', uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                  return { uid, name: userDoc.data().name };
-                }
-                else {
-                  console.warn(`No user found with UID: ${uid}`);
-                }
-              } catch (error) {
-                console.error(`Failed to fetch user with UID: ${uid}`, error);
-              }
-              return null;
-            })
-          );
-          setHouseholdMembers(membersInfo.filter(info => info !== null));
-        } catch (error) {
-          console.error("Error fetching household:", error);
-        }
-      };
-      fetchHouseholdMembers();
-    }, [selectedHouseholdID]);
-
-
-  
-  // Add a new item to Firestore
-const addItemToList = async () => {
-  if (!selectedHouseholdID || !shoppingListMeta) {
-    Alert.alert('Error', 'Please select a household with an active shopping list before adding items.');
-    return;
-  }
-
-  if (newItemName.trim() === '' || newItemCategory.trim() === '') {
-    Alert.alert('Error', 'Please enter an item name and its category');
-    return;
-  }
-
-  const cost = newItemCost.trim() ? parseFloat(newItemCost) : 0;
-
-  if (newItemCost.trim() && isNaN(cost)) {
-    Alert.alert('Error', 'Please enter a valid number for the item cost.');
-    return;
-  }
-
-  const newItemObj = {
-    itemName: newItemName,
-    category: newItemCategory,
-    cost,
-    addedBy: auth.currentUser.email,
-    isPurchased: false,
-    addedDate: new Date(),
+      setNewItemName('');
+      setNewItemCategory('');
+      setNewItemCost('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item. Please try again.');
+      console.error(error);
+    }
   };
 
-  try {
-    const itemsRef = collection(
-      db,
-      `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
-    );
-    await addDoc(itemsRef, newItemObj);
-
-    setNewItemName('');
-    setNewItemCategory('');
-    setNewItemCost('');
-  } catch (error) {
-    Alert.alert('Error', 'Failed to add item. Please try again.');
-    console.error(error);
-  }
-};
-
-  
   // Delete an item
   const deleteItem = async (itemId) => {
     try {
       // Reference to the specific item in the items subcollection
-      console.log('deleteItem called with itemId:', itemId);
-    console.log('selectedHouseholdID:', selectedHouseholdID);
-    console.log('shoppingListMeta:', shoppingListMeta);
-    console.log('shoppingListMeta.id:', shoppingListMeta ? shoppingListMeta.id : 'undefined');
-
-      const itemRef = doc(
-        db,
-        `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items/${itemId}`
-      );
+      const itemRef = doc(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items/${itemId}`);
 
       // Delete the item document
       await deleteDoc(itemRef);
@@ -365,11 +264,6 @@ const addItemToList = async () => {
     }
   };
 
-
-
-
-  const [customAmounts, setCustomAmounts] = useState({});
-  
   const splitBill = async () => {
     if (selectedMembers.length === 0) {
       Alert.alert('Error', 'Please select at least one member to split the bill.');
@@ -438,8 +332,6 @@ const addItemToList = async () => {
       Alert.alert('Error', 'Failed to record the split.');
     }
   };
-
-  
   
   const toggleItemSelection = (item) => {
     setSelectedItems((prevSelected) => {
@@ -471,126 +363,126 @@ const addItemToList = async () => {
         console.error(error);
       }
     }
+  };
 
-    const selectHousehold = (householdId) => {
-      setSelectedHouseholdID(householdId);
-      
-      // Find the name of the selected household
-      const household = households.find(h => h.id === householdId);
-      if (household) {
-        setSelectedHouseholdName(household.displayHouseholdName || 'Unnamed Household');
-      }
-  
-      setHouseholdModalVisible(false);
-    };
-  
+  const selectHousehold = (householdId) => {    
+    // Find the name of the selected household
+    const household = households.find(h => h.id === householdId);
+    if (household) {
+      setSelectedHouseholdName(household.displayHouseholdName);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.selectedHouseholdText}>
-        {selectedHouseholdName ? `Current Household: ${selectedHouseholdName}` : 'No household selected'}
-      </Text>
-  
-      <TouchableOpacity style={styles.householdButton} onPress={() => setHouseholdModalVisible(true)}>
-        <Text style={styles.householdButtonText}>Select Household</Text>
-      </TouchableOpacity>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Add a new item..."
-        value={newItemName}
-        onChangeText={setNewItemName}
-      />
-  
-      <TextInput
-        style={styles.input}
-        placeholder="Add item category..."
-        value={newItemCategory}
-        onChangeText={setNewItemCategory}
-      />
-  
-      <TextInput
-        style={styles.input}
-        placeholder="Add item cost (Optional)"
-        value={newItemCost}
-        onChangeText={setNewItemCost}
-      />
-  
-      <Button title="Add Item" onPress={addItemToList} />
-  
-      <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
-        <Text style={styles.filterButtonText}>Filter</Text>
-      </TouchableOpacity>
-          
-      <FlatList
-        data={filteredShoppingListItems}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Swipeable
-            renderRightActions={() => (
-              <View style={{ flexDirection: 'row' }}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => openEditModal(item)}
-                >
-                  <Text style={styles.actionText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => deleteItem(item.id)}
-                >
-                  <Text style={styles.actionText}>Delete</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          >
-            <View style={styles.listItem}>
-              <View style={styles.textContainer}>
-                <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
-                  {item.itemName} - ${item.cost}
-                </Text>
-                <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
-                  added by {item.addedBy}
-                </Text>
-                <Text style={[item.isPurchased && styles.purchasedText]}>
-                  Category: {item.category}
-                </Text>
-              </View>
-              
-              {/* Radio button to indicate that item has been purchased */}
-              <TouchableOpacity 
-                style={styles.radioButton}
-                onPress={() => togglePurchased(item.id, item.isPurchased, item)}
-              >
-                <Ionicons
-                  name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
-                  size={24}
-                  color={item.isPurchased ? 'orange' : 'gray'}
-                />
-              </TouchableOpacity>
-            </View>
-          </Swipeable>
-        )}
-      />
-  
-      <TouchableOpacity
-        style={styles.splitButton}
-        onPress={() => {
-          if (!selectedHouseholdID) {
-            Alert.alert('Error', 'Please choose a household.');
-          } else if (shoppingListItems.length === 0) {
-            Alert.alert('Error', 'There are no items in the list for this household.');
-          } else if (householdMembers.length <= 1) {
-            Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
-          } else {
-            setSplitMembersModalVisible(true);
+    <View style={styles.container}>      
+      <DropDownPicker
+        open={selectHouseHoldDropdown}
+        value={selectedHouseholdID}
+        items={households.map(household => ({
+          label: household.displayHouseholdName,
+          value: household.id,
+        }))}
+        setOpen={setSelectHouseHoldDropdown}
+        setValue={setSelectedHouseholdID}
+        placeholder="Select a Household"
+        onChangeValue={(value) => {
+          if (value) {
+            selectHousehold(value);
           }
         }}
-      >
-        <Text style={styles.splitButtonText}>Split the Bill</Text>
-      </TouchableOpacity>
-  
+        style={styles.dropdown}
+        textStyle={styles.dropdownText}
+        dropDownContainerStyle={styles.dropdownContainer}
+        placeholderStyle={styles.dropdownPlaceholder}
+      />
+
+      <View style={styles.shoppingListContainer}>
+        <View style={styles.shoppingListHeader}>
+          <Text style={styles.shoppingListTitle}>Shopping List</Text>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setAddItemModalVisible(true)}
+            >
+              <Text style={styles.addButtonText}>+ Add Item</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.splitButton}
+              onPress={() => {
+                if (!selectedHouseholdID) {
+                  Alert.alert('Error', 'Please choose a household.');
+                } else if (shoppingListItems.length === 0) {
+                  Alert.alert('Error', 'There are no items in the list for this household.');
+                } else if (householdMembers.length <= 1) {
+                  Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
+                } else {
+                  setSplitMembersModalVisible(true);
+                }
+              }}
+            >
+              <Text style={styles.splitButtonText}>Split</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+              <Ionicons name="options-outline" size={18} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <FlatList
+          data={filteredShoppingListItems}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <Swipeable
+              renderRightActions={() => (
+                <View style={{ flexDirection: 'row' }}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => openEditModal(item)}
+                  >
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => deleteItem(item.id)}
+                  >
+                    <Text style={styles.actionText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            >
+              <View style={styles.listItem}>
+                <View style={styles.textContainer}>
+                  <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
+                    {item.itemName} - ${item.cost}
+                  </Text>
+                  <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
+                    added by {item.addedBy}
+                  </Text>
+                  <Text style={[item.isPurchased && styles.purchasedText]}>
+                    Category: {item.category}
+                  </Text>
+                </View>
+                
+                {/* Radio button to indicate that item has been purchased */}
+                <TouchableOpacity 
+                  style={styles.radioButton}
+                  onPress={() => togglePurchased(item.id, item.isPurchased, item)}
+                >
+                  <Ionicons
+                    name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
+                    size={24}
+                    color={item.isPurchased ? 'orange' : 'gray'}
+                  />
+                </TouchableOpacity>
+              </View>
+            </Swipeable>
+          )}
+        />
+      </View>
+
       {/* Modal for selecting members to split */}
       <Modal
         visible={splitMembersModalVisible}
@@ -602,7 +494,9 @@ const addItemToList = async () => {
           <View style={styles.splitModalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
-              <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
+              <View style={{ paddingBottom: 13 }}>
+                <Button title="Close" onPress={() => setSplitMembersModalVisible(false)} />
+              </View>
             </View>
   
             <FlatList
@@ -624,15 +518,20 @@ const addItemToList = async () => {
                     );
                   }}
                 >
-                  <Text style={{ color: selectedMembers.includes(item.uid) ? '#fff' : '#000' }}>
-                    {item.name}
+                  <Text
+                    style={[
+                      styles.memberText,
+                      selectedMembers.includes(item.uid) && styles.memberTextSelected,
+                    ]}
+                  >
+                    {item.name ? item.name : 'Unnamed Member'}
                   </Text>
                 </TouchableOpacity>
               )}
             />
   
-            <Button
-              title="Next: Select Items"
+            <TouchableOpacity
+              style={styles.nextButton}
               onPress={() => {
                 if (selectedMembers.length === 0) {
                   Alert.alert('Error', 'Please select at least one member.');
@@ -640,11 +539,73 @@ const addItemToList = async () => {
                   setSplitItemsModalVisible(true);
                 }
               }}
-            />
+            >
+              <Text style={styles.nextButtonText}>Next: Select Items</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
-  
+
+      {/* Add Item Modal */}
+      <Modal
+        visible={addItemModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setAddItemModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.addItemModalContent}>
+            <Text style={styles.modalTitle}>Add A New Item</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item name"
+              placeholderTextColor="#aaa"
+              value={newItemName}
+              onChangeText={setNewItemName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item category"
+              placeholderTextColor="#aaa"
+              value={newItemCategory}
+              onChangeText={setNewItemCategory}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter item cost (Optional)"
+              placeholderTextColor="#aaa"
+              value={newItemCost}
+              onChangeText={setNewItemCost}
+              keyboardType="numeric"
+            />
+
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={() => {
+                  addItemToList();
+                  setAddItemModalVisible(false);
+                }}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper2}
+                onPress={() => {
+                  setAddItemModalVisible(false);
+                  setNewItemName('');
+                  setNewItemCategory('');
+                  setNewItemCost('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal for selecting items to split */}
       <Modal
         visible={splitItemsModalVisible}
@@ -724,7 +685,7 @@ const addItemToList = async () => {
                   householdMembers.find((member) => member.uid === item)?.name || 'You';
                 return (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={{ flex: 1 }}>{memberName}</Text>
+                    <Text style={{ flex: 1 }}>{memberName || ''}</Text>
                     <TextInput
                       style={{ borderWidth: 1, padding: 5, width: 100 }}
                       keyboardType="numeric"
@@ -787,9 +748,14 @@ const addItemToList = async () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.editModalContent}>
+          <Text style={styles.modalTitle}>
+            {currentEditItem ? `Editing: ${currentEditItem.itemName}` : "Editing..."}
+          </Text>
+
             <TextInput
               style={styles.input}
               placeholder="Edit item name"
+              placeholderTextColor="#aaa"
               value={editItemName}
               onChangeText={setEditItemName}
             />
@@ -797,6 +763,7 @@ const addItemToList = async () => {
             <TextInput
               style={styles.input}
               placeholder="Edit category"
+              placeholderTextColor="#aaa"
               value={editItemCategory}
               onChangeText={setEditItemCategory}
             />
@@ -804,13 +771,28 @@ const addItemToList = async () => {
             <TextInput
               style={styles.input}
               placeholder="Edit cost"
+              placeholderTextColor="#aaa"
               value={editItemCost}
               onChangeText={setEditItemCost}
             />
-  
-            <View style={styles.buttonContainer}>
-              <Button title="Save" onPress={saveEdit} />
-              <Button title="Cancel" onPress={() => setEditModalVisible(false)} color="red" />
+            
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={() => {
+                  saveEdit()
+                }}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButtonWrapper2}
+                onPress={() => {
+                  setEditModalVisible(false)
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -836,46 +818,15 @@ const addItemToList = async () => {
               onValueChange={(itemValue) => filterListByCategory(itemValue)}
               style={styles.picker}
             >
-              <Picker.Item label="No Filter" value="" />
+              <Picker.Item label="No Filter" value="" color="#000" />
               {categories.map((category, index) => (
-                <Picker.Item key={index} label={category} value={category} />
+                <Picker.Item key={index} label={category} value={category} color="#000" />
               ))}
             </Picker>
           </View>
         </View>
       </Modal>
-      
-      {/* Modal for selecting a household */}
-      <Modal
-        visible={householdModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setHouseholdModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.filterModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select a Household</Text>
-              <Button title="Close" onPress={() => setHouseholdModalVisible(false)} />
-            </View>
-  
-            <Picker
-              selectedValue={selectedHouseholdID}
-              onValueChange={(itemValue) => selectHousehold(itemValue)}
-              style={styles.picker}
-            >
-              {households.map((household) => (
-                <Picker.Item
-                  key={household.id}
-                  label={household.displayHouseholdName || "Unnamed Household"}
-                  value={household.id}
-                />
-              ))}
-            </Picker>
-          </View>
-        </View>
-      </Modal>
-  
+
       {/* Modal for cost */}
       <Modal
         visible={costModalVisible}
@@ -884,14 +835,13 @@ const addItemToList = async () => {
         onRequestClose={() => setCostModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.editModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Enter Item Cost</Text>
-              <Button title="Close" onPress={() => setCostModalVisible(false)} />
-            </View>
+          <View style={styles.costModalContent}>
+            <Text style={styles.modalTitle}>Enter Item Cost</Text>
+            
             <TextInput
               style={styles.input}
               placeholder="Enter item cost"
+              placeholderTextColor="#aaa"
               value={inputCost}
               onChangeText={setInputCost}
               keyboardType="numeric"
@@ -901,15 +851,7 @@ const addItemToList = async () => {
                 style={styles.actionButtonWrapper}
                 onPress={async () => {
                   try {
-                    const itemRef = doc(
-                      db,
-                      "households",
-                      selectedHouseholdID,
-                      "shoppingLists",
-                      shoppingListMeta.id,
-                      "items",
-                      currentItemForCost.id
-                    );
+                    const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
                     await updateDoc(itemRef, { isPurchased: true, cost: parseFloat(inputCost) });
                     setCostModalVisible(false);
                     setInputCost('');
@@ -940,137 +882,51 @@ const addItemToList = async () => {
 }
 
 const styles = StyleSheet.create({
+  // Main Container
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 55,
     backgroundColor: '#fff',
-    paddingTop: 40,
+    width: '100%',
   },
+
+  // Buttons
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     padding: 10,
     marginTop: 10,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 8,
-    marginBottom: 10,
-    borderRadius: 4,
-  },
-  listItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    backgroundColor: '#f9f9f9',
-    marginBottom: 5,
-    borderRadius: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  textContainer: {
-    flexDirection: 'column',
-    flex: 1,
-    marginRight: 10,
-  },
-  purchasedText: {
-    color: 'gray',
-    textDecorationLine: 'line-through',
-  },
-  radioButton: {
-    padding: 5,
-  },
-  itemName: {
-    fontWeight: 'bold',
-  },
-  selectedHouseholdText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginVertical: 10,
-  },  
-  addedByText: {
-    color: 'gray',
-  },
-  filterButton: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#007BFF',
+  splitButton: {
+    alignSelf: 'center',
+    backgroundColor: '#008F7A',
     padding: 10,
     borderRadius: 4,
+    marginBottom: 0,
+  },
+  splitButtonText: {
+    fontFamily: "Avenir",
+    color: '#fff',
   },
   filterButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 16,
   },
-  householdButton: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#28a745',
+  addButton: {
+    alignSelf: 'center',
+    backgroundColor: '#008F7A',
     padding: 10,
     borderRadius: 4,
-    marginBottom: 10,
+    marginBottom: 0,
   },
-  householdButtonText: {
+  addButtonText: {
+    fontFamily: "Avenir",
     color: '#fff',
-    fontWeight: 'bold',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  editModalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    margin: 20,
-    justifyContent: 'center',
-    height: '30%',
-    minHeight: 275,
-  },
-  filterModalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    height: '38%',
-    borderRadius: 15,
-    marginHorizontal: 20,
-    marginVertical: 50,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5, // Android shadow
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingTop: 10,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  closeButtonContainer: {
-    paddingLeft: 10,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#f9f9f9',
-    paddingHorizontal: 5,
-    marginTop: 10,
-  },
-  picker: {
-    height: 150,
-    width: '100%',
+    padding: 0,
+    borderRadius: 8,
   },
   editButton: {
     padding: 10,
@@ -1104,16 +960,144 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  splitButton: {
-    alignSelf: 'center',
-    backgroundColor: '#FF6347',
+  filterButton: {
+    backgroundColor: "#6C757D",
     padding: 10,
-    borderRadius: 4,
-    marginBottom: 10,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  splitButtonText: {
-    color: '#fff',
+
+  // Input Fields
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    marginBottom: 6,
+    borderRadius: 5,
+    width: '90%',
+    alignSelf: 'center',
+    fontFamily: "Avenir",
+  },
+
+  // Shopping List Container
+  shoppingListContainer: {
+    width: "100%",
+    height: '90%',
+    backgroundColor: "#ECECEC",
+    padding: 15,
+    borderRadius: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    marginVertical: 10,
+  },
+  subtitleContainer: {
+    marginBottm: 20,
+    alignItems: 'flex-start',  
+  },
+  shoppingListHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15, // Space between header and list
+  },
+  shoppingListTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Avenir",
+    color: "#333",
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4, // Space between buttons
+  },
+  listItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    backgroundColor: '#f9f9f9',
+    marginBottom: 5,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  textContainer: {
+    flexDirection: 'column',
+    flex: 1,
+    marginRight: 10,
+  },
+  itemName: {
+    fontFamily: "Avenir",
     fontWeight: 'bold',
+  },
+  addedByText: {
+    fontFamily: "Avenir",
+    color: 'gray',
+  },
+  purchasedText: {
+    fontFamily: "Avenir",
+    color: 'gray',
+    textDecorationLine: 'line-through',
+  },
+  radioButton: {
+    padding: 5,
+  },
+  
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  editModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    elevation: 5, // Shadow for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  costModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    elevation: 5, // Shadow for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  addItemModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    elevation: 5, // Shadow for Android
+    shadowColor: '#000', // Shadow for iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  filterModalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    height: '38%',
+    borderRadius: 15,
+    marginHorizontal: 20,
+    marginVertical: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5, // Android shadow
   },
   splitModalContent: {
     backgroundColor: '#fff',
@@ -1129,32 +1113,38 @@ const styles = StyleSheet.create({
     shadowRadius: 4, // shadow for IOS
     elevation: 5, // shadow for android
   },
-  noHouseholdsText: {
-    fontSize: 16,
-    color: '#777',
-    textAlign: 'center',
-    marginTop: 10,
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: "Avenir",
+    marginBottom: 10,
   },
   modalButtonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  actionButtonWrapper: {
-    backgroundColor: '#007BFF',
-    padding: 10,
-    borderRadius: 4,
-    flex: 1,
     alignItems: 'center',
-    marginRight: 5,
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 2,
+  },
+  actionButtonWrapper: { // Households exist
+    backgroundColor: "#008F7A",
+    flexDirection:'row',
+    padding: 11,
+    borderRadius: 8,
   },
   actionButtonWrapper2: {
-    backgroundColor: '#FF6347',
-    padding: 10,
-    borderRadius: 4,
-    flex: 1,
+    backgroundColor: "#DF0808",
+    flexDirection:'row',
+    padding: 11,
+    borderRadius: 8,
     alignItems: 'center',
-    marginLeft: 5,
+    justifyContent: 'center'
   },
   buttonText: {
     color: '#fff',
@@ -1163,5 +1153,57 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  
+  // Dropdown
+  dropdown: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  dropdownPlaceholder: {
+    fontFamily: "Avenir",
+    fontSize: 18,
+    color: '#aaa',
+  },
+  dropdownText: {
+    fontFamily: "Avenir",
+    fontSize: 18,
+    color: '#333',
+  },
+  dropdownContainer: {
+    borderColor: '#ddd',
+    borderRadius: 8,
+  },
+  
+  // Picker
+  picker: {
+    height: 150,
+    width: '100%',
+  },
+
+  // Split the Bill
+  memberText: {
+    fontSize: 16,  // Adjust font size
+    fontFamily: 'Avenir', // Adjust font family
+    fontWeight: '500', // Adjust font weight
+    color: '#000', // Default color for unselected
+  },
+  memberTextSelected: {
+    color: '#fff', // Color for selected members
+  },
+  nextButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+  },
+
+  nextButtonText: {
+    fontFamily: 'Avenir', // Font family
+    fontSize: 16,         // Font size
+    fontWeight: 'bold',   // Font weight
+    color: '#007BFF',        // Text color
   },
 });
