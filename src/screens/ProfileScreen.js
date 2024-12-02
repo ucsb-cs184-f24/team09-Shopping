@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   deleteAccountButton: {
-    marginTop: 20,
+    marginTop: 10,
     padding: 10,
     width: '80%',
     alignItems: 'center',

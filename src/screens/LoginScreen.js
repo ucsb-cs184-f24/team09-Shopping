@@ -60,7 +60,10 @@ export default function LoginScreen({ navigation }) {
                         style={styles.passwordInput}
                         secureTextEntry={!passwordVisible}
                     />
-                    <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
+                    <TouchableOpacity
+                        onPress={() => setPasswordVisible(!passwordVisible)}
+                        testID="passwordToggle"
+                    >
                         <Ionicons name={passwordVisible ? "eye" : "eye-off"} size={24} color="black" />
                     </TouchableOpacity>
                 </View>
