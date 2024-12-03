@@ -749,6 +749,8 @@ export default function HomeScreen() {
                     );
                   } else {
                     setShowCustomAmountModal(false);
+                    setSplitItemsModalVisible(false);
+                    setSplitMembersModalVisible(false);
                     proceedWithSplitBill(totalCost);
                   }
                 }}
