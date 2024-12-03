@@ -749,8 +749,6 @@ export default function HomeScreen() {
                     );
                   } else {
                     setShowCustomAmountModal(false);
-                    setSplitItemsModalVisible(false);
-                    setSplitMembersModalVisible(false);
                     proceedWithSplitBill(totalCost);
                   }
                 }}
@@ -763,7 +761,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-      
   
       {/* Modal for editing items */}
       <Modal
