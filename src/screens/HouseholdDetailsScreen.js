@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react
 import { doc, getDoc, updateDoc, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import QRCode from 'react-native-qrcode-svg';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function HouseholdDetailsScreen({ route, navigation }) {
     const { householdId } = route.params;
@@ -99,29 +99,31 @@ export default function HouseholdDetailsScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Icon name="arrow-back" size={24} color="#000" />
-                <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
+            <View style={styles.backButtonContainer}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <Ionicons name="chevron-back-outline" size={24} color="#000" />
+                    </TouchableOpacity>
+            </View>
             {household ? (
                 <>
                     <Text style={styles.title}>{household.displayHouseholdName}</Text>
-                    <Text>Code: {household.code}</Text>
-                    <Text style={styles.subtitle}>Members:</Text>
-                    <FlatList 
-                        data={members}
-                        renderItem={renderMember}
-                        keyExtractor={item => item.userId}
-                        style={styles.membersList}
-                    />
+                    <Text style={styles.code}>Code: {household.code}</Text>
+                    <View style={styles.membersList}>
+                        <Text style={styles.subtitle}>Members</Text>
+                        <FlatList
+                            data={members}
+                            renderItem={renderMember}
+                            keyExtractor={item => item.userId}
+                        />
+                    </View>
                     <View style={styles.qrCodeContainer}>
                         <QRCode 
                             value={householdId} // Use household ID as the value
-                            size={150}          // Customize size as needed
+                            size={230}          // Customize size as needed
                         />
                     </View>
                     <TouchableOpacity style={styles.leaveButton} onPress={confirmLeaveHousehold}>
-                        <Text style={styles.leaveButtonText}>Leave Group</Text>
+                        <Text style={styles.leaveButtonText}>Leave household</Text>
                     </TouchableOpacity>
                 </>
             ) : (
@@ -134,9 +136,16 @@ export default function HouseholdDetailsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
+        backgroundColor: 'white',
+    },
+    backButtonContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        position: 'absolute',
+        top: 75,
+        left: 25,
     },
     backButton: {
         flexDirection: 'row',
@@ -145,41 +154,70 @@ const styles = StyleSheet.create({
         top: 40,
         left: 20,
     },
-    backButtonText: {
-        fontSize: 16,
-        marginLeft: 5,
-    },
     title: {
         fontSize: 24,
-        marginBottom: 20,
-        marginTop: 20,
+        marginBottom: 6,
+        marginTop: 80,
         textAlign: 'center',
+        fontFamily: 'Avenir'
     },
     subtitle: {
         fontSize: 18,
-        marginTop: 20,
-        marginBottom: 10,
-        textAlign: 'center',
+        textAlign: 'left',
+        fontFamily: "Avenir",
+        opacity: 0.8,
     },
     membersList: {
+        backgroundColor: "#ECECEC",
+        padding: 15,
+        borderRadius: 8,
+        marginTop: 24,
+        marginRight: 30,
+        marginLeft: 30,
+        shadowColor: '#000000',  // Black color
+        shadowOffset: { width: 0, height: 3 },  // Position X: 0, Y: 3
+        shadowOpacity: 0.2,  // 20% opacity
+        shadowRadius: 5,  // Blur
+        gap: 6,
         width: '90%',
     },
     memberItem: {
-        padding: 10,
-        borderBottomWidth: 1,
-        borderColor: '#ccc',
+        padding: 14,
+        marginBottom: 6,
+        width: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: "space-between"
     },
     leaveButton: {
         marginTop: 20,
         padding: 10,
-        backgroundColor: 'red',
-        borderRadius: 5,
+        backgroundColor: '#DF0808',
+        borderRadius: 8,
         alignItems: 'center',
         width: '90%',
+        position: 'absolute',
+        bottom: 0,
+        marginBottom: 20,
     },
     leaveButtonText: {
         color: '#fff',
         fontSize: 16,
+        fontFamily: 'Avenir',
+        fontWeight: 'bold'
     },
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    code: {
+        fontFamily: 'Avenir',
+        opacity: 0.5,
+    },
+    qrCodeContainer: {
+        marginTop: 64,
+    }
 });
 
