@@ -1,0 +1,6 @@
+- Made an important commit in the beginning which helped set up the backend for the project, the github commit https://github.com/ucsb-cs184-f24/team09-Shopping/pull/48, the PR logged items to a database and set up the information frame that included the household and UserID within Firebase which closed issue #19  
+- PR https://github.com/ucsb-cs184-f24/team09-Shopping/pull/48 also closed issue #20 by adding a category field that a user was required to separately fill out in addition to the item name, and the information was stored in Firebase database
+- Recorded the MVP video screen recording and narration to present the product to the class
+- Displayed the current household that the user is viewing within the "Add Items" page for better UI and functionality so they know what household they're on in https://github.com/ucsb-cs184-f24/team09-Shopping/pull/90
+- Created custom bill splitting functionality where, once user selects members to split the bill with, they choose the custom amount for each member (which must sum up to item cost) and the information gets passed to the Balances backend
+- Helped keep track of team progress in group chat by putting reminders out for important deadlines

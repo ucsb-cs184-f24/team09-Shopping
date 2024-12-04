@@ -1,0 +1,2 @@
+- Set up Firebase https://github.com/ucsb-cs184-f24/team09-Shopping/pull/38 and implemented functionality to check off list items on the shopping list page 
+- Worked on the UI components and designing mockups for the app flow

@@ -30,6 +30,8 @@ export default function HomeScreen() {
   const [newItemCategory, setNewItemCategory] = useState(''); // String of new item category
   const [newItemCost, setNewItemCost] = useState(''); // String of new item cost
   const [totalCost, setTotalCost] = useState(0);
+  const [pinnedItems, setPinnedItems] = useState([]);  // Array of pinned items
+
 
   // Edit item states
   const [currentEditItem, setCurrentEditItem] = useState(null); // Object of item currently editing
@@ -181,6 +183,30 @@ export default function HomeScreen() {
     // Cleanup listener when the component unmounts or household changes
     return () => unsubscribe();
   }, [selectedHouseholdID]);  
+
+
+  const togglePinItem = async (itemId, isPinned) => {
+    try {
+      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+      await updateDoc(itemRef, {
+        pinned: !isPinned,
+      });
+  
+      // Update the local state to reflect the change
+      setShoppingListItems((prevItems) => {
+        return prevItems.map((item) => {
+          if (item.id === itemId) {
+            return { ...item, pinned: !isPinned };
+          }
+          return item;
+        });
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update pin status. Please try again.');
+      console.error(error);
+    }
+  };
+
 
   // Add a new item to Firestore
   const addItemToList = async () => {
@@ -431,7 +457,12 @@ export default function HomeScreen() {
         </View>
 
         <FlatList
-          data={filteredShoppingListItems}
+          data={filteredShoppingListItems.sort((a, b) => {
+            if (a.pinned === b.pinned) {
+              return a.addedDate < b.addedDate ? 1 : -1;
+            }
+            return b.pinned - a.pinned;
+          })}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <Swipeable
@@ -465,6 +496,16 @@ export default function HomeScreen() {
                     Category: {item.category}
                   </Text>
                 </View>
+                <TouchableOpacity
+                  style={styles.pinButton}
+                  onPress={() => togglePinItem(item.id, item.pinned)}
+                >
+                  <Ionicons
+                    name={item.pinned ? 'bookmark' : 'bookmark-outline'}
+                    size={34}
+                    color={item.pinned ? '#FFD700' : 'gray'}
+                  />
+                </TouchableOpacity>
                 
                 {/* Radio button to indicate that item has been purchased */}
                 <TouchableOpacity 
@@ -749,6 +790,8 @@ export default function HomeScreen() {
                     );
                   } else {
                     setShowCustomAmountModal(false);
+                    setSplitItemsModalVisible(false);
+                    setSplitMembersModalVisible(false);
                     proceedWithSplitBill(totalCost);
                   }
                 }}
@@ -1027,6 +1070,10 @@ const styles = StyleSheet.create({
   },
   radioButton: {
     padding: 5,
+  },
+  pinButton: {
+    padding: 5,
+    marginLeft: 10,
   },
   actionsContainer: {
     flexDirection: 'row',
