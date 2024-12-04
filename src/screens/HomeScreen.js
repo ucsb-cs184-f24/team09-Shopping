@@ -32,7 +32,6 @@ export default function HomeScreen() {
   const [totalCost, setTotalCost] = useState(0);
   const [pinnedItems, setPinnedItems] = useState([]);  // Array of pinned items
 
-
   // Edit item states
   const [currentEditItem, setCurrentEditItem] = useState(null); // Object of item currently editing
   const [editItemName, setEditItemName] = useState('');  // String of new item name
@@ -43,11 +42,9 @@ export default function HomeScreen() {
   // Modal states
   const [filterModalVisible, setFilterModalVisible] = useState(false); // Bool of modal visibility
   const [editModalVisible, setEditModalVisible] = useState(false); // Bool of modal visibility
-  const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false); // Bool of modal visibility
-  const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false); // Bool of modal visibility
-  const [showCustomAmountModal, setShowCustomAmountModal] = useState(false)
   const [costModalVisible, setCostModalVisible] = useState(false); // Bool of modal visibility
   const [addItemModalVisible, setAddItemModalVisible] = useState(false);
+  const [splitModalVisible, setsplitModalVisible] = useState(false);
 
   // Dropdown picker states
   const [selectHouseHoldDropdown, setSelectHouseHoldDropdown] = useState(false);
@@ -58,6 +55,7 @@ export default function HomeScreen() {
   const [currentItemForCost, setCurrentItemForCost] = useState(null);
   const [inputCost, setInputCost] = useState('');
   const [customAmounts, setCustomAmounts] = useState({});
+  const [splitStep, setSplitStep] = useState('members')
 
   // Fetch the households associated with the user and automatically assign first one
   useEffect(() => {
@@ -443,7 +441,7 @@ export default function HomeScreen() {
                 } else if (householdMembers.length <= 1) {
                   Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
                 } else {
-                  setSplitMembersModalVisible(true);
+                  setsplitModalVisible(true);
                 }
               }}
             >
@@ -583,226 +581,237 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Modal for selecting members to split */}
+      
+      {/* Modal for splitting */}
       <Modal
-        visible={splitMembersModalVisible}
+        visible={splitModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setSplitMembersModalVisible(false)}
+        onRequestClose={() => setsplitModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.splitModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
-              <TouchableOpacity onPress={() => setSplitMembersModalVisible(false)}>
-                <Text style={styles.closeButton1}>
-                  Close
-                </Text>
-              </TouchableOpacity>
-            </View>
-  
-            <FlatList
-              data={householdMembers.filter((member) => member.uid !== auth.currentUser.uid)}
-              keyExtractor={(item) => item.uid}
-              renderItem={({ item }) => (
+        {splitStep === 'members' && (
+          <View style={styles.modalContainer}>
+            <View style={styles.splitModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
                 <TouchableOpacity
-                  style={{
-                    padding: 10,
-                    backgroundColor: selectedMembers.includes(item.uid) ? '#008F7A' : '#fff',
-                    borderRadius: 4,
-                    marginBottom: 5,
-                  }}
                   onPress={() => {
-                    setSelectedMembers((prevSelected) =>
-                      prevSelected.includes(item.uid)
-                        ? prevSelected.filter((member) => member !== item.uid)
-                        : [...prevSelected, item.uid]
-                    );
-                  }}
+                    setSplitStep('members');
+                    setSelectedItems([]);
+                    setSelectedMembers([]);
+                    setCustomAmounts({});
+                    setsplitModalVisible(false)}
+                  }
                 >
-                  <Text
-                    style={[
-                      styles.listText,
-                      selectedMembers.includes(item.uid) && styles.listTextSelected,
-                    ]}
-                  >
-                    {item.name ? item.name : 'Unnamed Member'}
+                  <Text style={styles.closeButton1}>
+                    Close
                   </Text>
                 </TouchableOpacity>
-              )}
-            />
-
-            <View style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                onPress={() => {
-                  if (selectedMembers.length === 0) {
-                    Alert.alert('Error', 'Please select at least one member.');
-                  } else {
-                    setSplitItemsModalVisible(true);
-                  }
-                }}
-              >
-                <Text style={styles.nextButtonText}>Next: Select Items</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal for selecting items to split */}
-      <Modal
-        visible={splitItemsModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setSplitItemsModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.splitModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Items to Split</Text>
-              <TouchableOpacity onPress={() => setSplitItemsModalVisible(false)}>
-                <Text style={styles.closeButton1}>
-                  Close
-                </Text>
-              </TouchableOpacity>
-            </View>
-  
-            <FlatList
-              data={shoppingListItems.filter((item) => item.isPurchased)}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={{
-                    padding: 10,
-                    backgroundColor: selectedItems.includes(item.id) ? '#008F7A' : '#fff',
-                    borderRadius: 4,
-                    marginBottom: 5,
-                  }}
-                  onPress={() => {
-                    setSelectedItems((prevSelected) =>
-                      prevSelected.includes(item.id)
-                        ? prevSelected.filter((i) => i !== item.id)
-                        : [...prevSelected, item.id]
-                    ), toggleItemSelection(item);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.listText,
-                      selectedItems.includes(item.id) && styles.listTextSelected,
-                    ]}
+              </View>
+    
+              <FlatList
+                data={householdMembers.filter((member) => member.uid !== auth.currentUser.uid)}
+                keyExtractor={(item) => item.uid}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={{
+                      padding: 10,
+                      backgroundColor: selectedMembers.includes(item.uid) ? '#008F7A' : '#fff',
+                      borderRadius: 4,
+                      marginBottom: 5,
+                    }}
+                    onPress={() => {
+                      setSelectedMembers((prevSelected) =>
+                        prevSelected.includes(item.uid)
+                          ? prevSelected.filter((member) => member !== item.uid)
+                          : [...prevSelected, item.uid]
+                      );
+                    }}
                   >
-                    {item.itemName} - ${item.cost}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-            <View style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                onPress={() => {
-                  if (selectedItems.length === 0) {
-                    Alert.alert('Error', 'Please select at least one item.');
-                  } else {
-                    splitBill(); // Initializes customAmounts and shows the custom amount modal
-                    setShowCustomAmountModal(true);
-                  }
-                }}
-              >
-                <Text style={styles.nextButtonText}>
-                  Next: Assign Custom Amounts
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-  
-      {/* Modal for assigning custom amounts */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showCustomAmountModal}
-        onRequestClose={() => {
-          setShowCustomAmountModal(false);
-        }}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.splitModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Assign Custom Amount</Text>
-              <TouchableOpacity onPress={() => setShowCustomAmountModal(false)}>
-                <Text style={styles.closeButton1}>
-                  Close
-                </Text>
-              </TouchableOpacity>
-            </View>
-  
-            <FlatList
-              data={[...selectedMembers, auth.currentUser.uid]}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => {
-                const memberName =
-                  householdMembers.find((member) => member.uid === item)?.name || 'You';
-                return (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={styles.nameText}>{memberName || ''}</Text>
-                    <TextInput
-                      style={{ borderWidth: 1, padding: 5, width: 100, borderRadius: 10}}
-                      keyboardType="numeric"
-                      value={customAmounts[item] || ''}
-                      onChangeText={(value) => {
-                        const newAmounts = { ...customAmounts };
-                        newAmounts[item] = value; // Store raw input
-                        setCustomAmounts(newAmounts);
-                      }}
-                    />
-                  </View>
-                );
-              }}
-            />
+                    <Text
+                      style={[
+                        styles.listText,
+                        selectedMembers.includes(item.uid) && styles.listTextSelected,
+                      ]}
+                    >
+                      {item.name ? item.name : 'Unnamed Member'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
 
-            <View style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                onPress={() => {
-                  const parsedAmounts = {};
-                  let invalidInput = false;
-                  Object.keys(customAmounts).forEach((key) => {
-                  const amount = parseFloat(customAmounts[key]);
-                    if (isNaN(amount)) {
-                      Alert.alert('Error', 'Please enter valid numeric amounts.');
-                      return;
+              <View style={styles.nextButtonContainer}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedMembers.length === 0) {
+                      Alert.alert('Error', 'Please select at least one member.');
                     } else {
-                      parsedAmounts[key] = amount;
+                      setSplitStep('items');
                     }
-                  });
-                  const totalAssigned = Object.values(parsedAmounts).reduce(
-                    (sum, amount) => sum + amount,
-                    0
-                  );
-              
-                  // Check if the total assigned matches the total cost
-                  if (Math.abs(totalAssigned - totalCost) > 0.01) {
-                    // Show an error if the amounts don't match
-                    Alert.alert(
-                      'Error',
-                      `The assigned amounts (${totalAssigned.toFixed(2)}) must equal the total cost (${totalCost.toFixed(2)}).`
-                    );
-                  } else {
-                    setShowCustomAmountModal(false);
-                    setSplitItemsModalVisible(false);
-                    setSplitMembersModalVisible(false);
-                    proceedWithSplitBill(totalCost);
-                  }
-                }}
-              >
-                <Text style={styles.nextButtonText}>
-                  Confirm Split
-                </Text>
-              </TouchableOpacity>
+                  }}
+                >
+                  <Text style={styles.nextButtonText}>Next: Select Items</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        )}
+
+        {splitStep === 'items' && (
+          <View style={styles.modalContainer}>
+            <View style={styles.splitModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Items to Split</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSplitStep('members');
+                    setSelectedItems([]);
+                    setSelectedMembers([]);
+                    setCustomAmounts({});
+                    setsplitModalVisible(false)}
+                  }
+                >
+                  <Text style={styles.closeButton1}>
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </View>
+    
+              <FlatList
+                data={shoppingListItems.filter((item) => item.isPurchased)}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={{
+                      padding: 10,
+                      backgroundColor: selectedItems.includes(item.id) ? '#008F7A' : '#fff',
+                      borderRadius: 4,
+                      marginBottom: 5,
+                    }}
+                    onPress={() => {
+                      setSelectedItems((prevSelected) =>
+                        prevSelected.includes(item.id)
+                          ? prevSelected.filter((i) => i !== item.id)
+                          : [...prevSelected, item.id]
+                      ), toggleItemSelection(item);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.listText,
+                        selectedItems.includes(item.id) && styles.listTextSelected,
+                      ]}
+                    >
+                      {item.itemName} - ${item.cost}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+              <View style={styles.nextButtonContainer}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedItems.length === 0) {
+                      Alert.alert('Error', 'Please select at least one item.');
+                    } else {
+                      splitBill(); // Initializes customAmounts and shows the custom amount modal
+                      setSplitStep('custom');
+                    }
+                  }}
+                >
+                  <Text style={styles.nextButtonText}>
+                    Next: Assign Custom Amounts
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {splitStep === 'custom' && (
+          <View style={styles.modalContainer}>
+            <View style={styles.splitModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Assign Custom Amount</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSplitStep('members');
+                    setSelectedItems([]);
+                    setSelectedMembers([]);
+                    setCustomAmounts({});
+                    setsplitModalVisible(false)}
+                  }
+                >
+                  <Text style={styles.closeButton1}>
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </View>
+    
+              <FlatList
+                data={[...selectedMembers, auth.currentUser.uid]}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => {
+                  const memberName =
+                    householdMembers.find((member) => member.uid === item)?.name || 'You';
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                      <Text style={styles.nameText}>{memberName || ''}</Text>
+                      <TextInput
+                        style={{ borderWidth: 1, padding: 5, width: 100, borderRadius: 10}}
+                        keyboardType="numeric"
+                        value={customAmounts[item] || ''}
+                        onChangeText={(value) => {
+                          const newAmounts = { ...customAmounts };
+                          newAmounts[item] = value; // Store raw input
+                          setCustomAmounts(newAmounts);
+                        }}
+                      />
+                    </View>
+                  );
+                }}
+              />
+
+              <View style={styles.nextButtonContainer}>
+                <TouchableOpacity
+                  onPress={() => {
+                    const parsedAmounts = {};
+                    let invalidInput = false;
+                    Object.keys(customAmounts).forEach((key) => {
+                    const amount = parseFloat(customAmounts[key]);
+                      if (isNaN(amount)) {
+                        Alert.alert('Error', 'Please enter valid numeric amounts.');
+                        return;
+                      } else {
+                        parsedAmounts[key] = amount;
+                      }
+                    });
+                    const totalAssigned = Object.values(parsedAmounts).reduce(
+                      (sum, amount) => sum + amount,
+                      0
+                    );
+                
+                    // Check if the total assigned matches the total cost
+                    if (Math.abs(totalAssigned - totalCost) > 0.01) {
+                      // Show an error if the amounts don't match
+                      Alert.alert(
+                        'Error',
+                        `The assigned amounts (${totalAssigned.toFixed(2)}) must equal the total cost (${totalCost.toFixed(2)}).`
+                      );
+                    } else {
+                      setSplitStep('members');
+                      setsplitModalVisible(false);
+                      proceedWithSplitBill(totalCost);
+                    }
+                  }}
+                >
+                  <Text style={styles.nextButtonText}>
+                    Confirm Split
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
       </Modal>
   
       {/* Modal for editing items */}
