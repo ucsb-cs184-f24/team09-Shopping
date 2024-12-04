@@ -1,4 +1,5 @@
-- Set up Firebase https://github.com/ucsb-cs184-f24/team09-Shopping/pull/38 and implemented functionality to check off list items on the shopping list page https://github.com/ucsb-cs184-f24/team09-Shopping/pull/50
+- Set up Firebase https://github.com/ucsb-cs184-f24/team09-Shopping/pull/38 initially and implemented functionality to check off list items on the shopping list page https://github.com/ucsb-cs184-f24/team09-Shopping/pull/50
+- Worked on brainstorming ideas for our app and providing ways to make the app more usable
 - Implemeneted functionality for user to upload their profile picture https://github.com/ucsb-cs184-f24/team09-Shopping/pull/98
 - Established design system to standardize design components and provide a seamless experience for the user.
 - Conducted design experiments for the UI of the app. https://github.com/ucsb-cs184-f24/team09-Shopping/pull/78
