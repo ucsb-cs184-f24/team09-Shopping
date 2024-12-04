@@ -5,6 +5,6 @@
   - Implemented profile picture persistence to ensure images remain intact after the app reloads, significantly enhancing user experience.
   - Worked on splitting the bill feature with equal cost distribution, making expense sharing intuitive and easy.
   - I worked on documentation like the design document, the user manual, and the product backlog, I also 2 retrospectives.
-  - I had a total of 7 PRs that I worked on (15 Issues) and reviewed over 13 PRs
+  - I had a total of 7 PRs that I worked on (15 Issues) and reviewed over 15 PRs
 
   
