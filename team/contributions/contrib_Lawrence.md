@@ -1,0 +1,5 @@
+- Worked on the implementation and functionality of the Login and SignUp processes
+- Set up the base features and handling of the Profile Page
+- Organized the logic for users to create/join households i.e. codes as well as display basic information of the households (# members, name of household)
+- Set up PayPal functionality as well as the correct calculations in handling the respective user's debts
+- Did code reviews on many of the member's respective pull requests
