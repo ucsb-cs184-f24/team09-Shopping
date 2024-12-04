@@ -12,7 +12,7 @@ const Tab = createBottomTabNavigator();
 export default function App() {
     return (
         <Tab.Navigator
-            initialRouteName="Shopping Lists"
+            initialRouteName="Households"
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ color, size }) => {
                     let iconName;
@@ -53,14 +53,17 @@ export default function App() {
                     headerShown: false,
                 }}
             />
-            <Tab.Screen name="Balances" component={BalancesScreen} />
+            <Tab.Screen name="Balances" component={BalancesScreen} 
+                options={{ 
+                    headerShown: false,
+                }}
+            />
             <Tab.Screen 
                 name="Summary" 
                 component={SummaryScreen} 
                 options={{ 
-                    title: 'Summary',
-                    tabBarLabel: 'Summary',
-                }} 
+                    headerShown: false,
+                }}
             />
             <Tab.Screen name="Profile" component={ProfileScreen}
                 options={{ 
