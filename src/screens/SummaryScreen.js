@@ -294,9 +294,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   selectedButton: {
-    backgroundColor: '#3F51B5',
+    backgroundColor: '#008F7A',
     color: '#fff',
-    borderColor: '#3F51B5',
+    borderColor: '#008F7A',
   },
   card: {
     backgroundColor: '#fff',
