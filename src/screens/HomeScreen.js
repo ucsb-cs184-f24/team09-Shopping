@@ -30,6 +30,8 @@ export default function HomeScreen() {
   const [newItemCategory, setNewItemCategory] = useState(''); // String of new item category
   const [newItemCost, setNewItemCost] = useState(''); // String of new item cost
   const [totalCost, setTotalCost] = useState(0);
+  const [pinnedItems, setPinnedItems] = useState([]);  // Array of pinned items
+
 
   // Edit item states
   const [currentEditItem, setCurrentEditItem] = useState(null); // Object of item currently editing
@@ -182,6 +184,30 @@ export default function HomeScreen() {
     return () => unsubscribe();
   }, [selectedHouseholdID]);  
 
+
+  const togglePinItem = async (itemId, isPinned) => {
+    try {
+      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+      await updateDoc(itemRef, {
+        pinned: !isPinned,
+      });
+  
+      // Update the local state to reflect the change
+      setShoppingListItems((prevItems) => {
+        return prevItems.map((item) => {
+          if (item.id === itemId) {
+            return { ...item, pinned: !isPinned };
+          }
+          return item;
+        });
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update pin status. Please try again.');
+      console.error(error);
+    }
+  };
+
+
   // Add a new item to Firestore
   const addItemToList = async () => {
     if (!selectedHouseholdID) {
@@ -281,18 +307,18 @@ export default function HomeScreen() {
     // Use full item objects to calculate total cost
     let calculatedCost = 0;
 
-    // Use full item objects to calculate total cost
-    selectedItems.forEach((item) => {
-      const itemCost = item.cost !== undefined ? parseFloat(item.cost) : 0;
-      console.log(`Item: ${item.itemName || item.id}, Cost: ${itemCost}`);
-      calculatedCost += itemCost;
-    });
+  // Use full item objects to calculate total cost
+  selectedItems.forEach((item) => {
+    const itemCost = item.cost !== undefined ? parseFloat(item.cost) : 0;
+    console.log(`Item: ${item.itemName || item.id}, Cost: ${itemCost}`);
+    calculatedCost += itemCost;
+  });
 
-    setTotalCost(calculatedCost);
+  setTotalCost(calculatedCost);
 
-    console.log('Total Cost:', calculatedCost);
-    const splitAmount = parseFloat((calculatedCost / (selectedMembers.length + 1)).toFixed(2));
-    console.log('Split Amount (evenly):', splitAmount);
+  console.log('Total Cost:', calculatedCost);
+  const splitAmount = parseFloat((calculatedCost / (selectedMembers.length + 1)).toFixed(2));
+  console.log('Split Amount:', splitAmount);
   
     // Initialize customAmounts with default splitAmount
     const currentUser = getCurrentUser(); // Replace with your method to get the current user
@@ -431,7 +457,12 @@ export default function HomeScreen() {
         </View>
 
         <FlatList
-          data={filteredShoppingListItems}
+          data={filteredShoppingListItems.sort((a, b) => {
+            if (a.pinned === b.pinned) {
+              return a.addedDate < b.addedDate ? 1 : -1;
+            }
+            return b.pinned - a.pinned;
+          })}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <Swipeable
@@ -465,6 +496,16 @@ export default function HomeScreen() {
                     Category: {item.category}
                   </Text>
                 </View>
+                <TouchableOpacity
+                  style={styles.pinButton}
+                  onPress={() => togglePinItem(item.id, item.pinned)}
+                >
+                  <Ionicons
+                    name={item.pinned ? 'bookmark' : 'bookmark-outline'}
+                    size={34}
+                    color={item.pinned ? '#FFD700' : 'gray'}
+                  />
+                </TouchableOpacity>
                 
                 {/* Radio button to indicate that item has been purchased */}
                 <TouchableOpacity 
@@ -1002,6 +1043,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15, // Space between header and list
+  },
+  pinButton: {
+    padding: 5,
+    marginLeft: 10,
   },
   shoppingListTitle: {
     fontSize: 18,
