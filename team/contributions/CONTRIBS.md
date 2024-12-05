@@ -20,10 +20,10 @@
 - Implemented the mockups for log in screen, register screen, home screen, balances screen, join household screen, household details screen, and profile screen. https://github.com/ucsb-cs184-f24/team09-Shopping/pull/98 https://github.com/ucsb-cs184-f24/team09-Shopping/pull/120 https://github.com/ucsb-cs184-f24/team09-Shopping/pull/137
 
 ## Lawrence
-- Worked on the implementation and functionality of the Login and SignUp processes
-- Set up the base features and handling of the Profile Page, where it displays the user information inputted when creating an account. Also made this information  editable for users. Included options for users to sign out and delete their accounts, with correct messages confirming their actions
-- Organized the database logic (Firestore) for users to create/join households i.e. codes as well as display basic information of the households (# members, name of household), made sure every household would be distinct from each other (no same name, different join codes)
-- Set up PayPal functionality (i.e. webview) as well as the correct calculations in handling the respective user's debts
+- Worked on the implementation and functionality of the Login and SignUp processes (PR https://github.com/ucsb-cs184-f24/team09-Shopping/pull/91, https://github.com/ucsb-cs184-f24/team09-Shopping/pull/44)
+- Set up the base features and handling of the Profile Page, where it displays the user information inputted when creating an account. Also made this information  editable for users. Included options for users to sign out and delete their accounts, with correct messages confirming their actions (PR https://github.com/ucsb-cs184-f24/team09-Shopping/pull/68, https://github.com/ucsb-cs184-f24/team09-Shopping/pull/124)
+- Organized the database logic (Firestore) for users to create/join households i.e. codes as well as display basic information of the households (# members, name of household), made sure every household would be distinct from each other (PR https://github.com/ucsb-cs184-f24/team09-Shopping/pull/61, https://github.com/ucsb-cs184-f24/team09-Shopping/pull/70)
+- Set up Record Payment i.e. cash or PayPal (via webview) as well as the logic in calculating/displaying the respective user's debts (PR https://github.com/ucsb-cs184-f24/team09-Shopping/pull/119, https://github.com/ucsb-cs184-f24/team09-Shopping/pull/131)
 - Did code reviews on many of the member's respective pull requests, manually testing their implementations on my personal device
 
 ## Owen
