@@ -10,7 +10,7 @@ import { PaymentIcon } from 'react-native-payment-icons';
 // TODO: Subtract amount paid in firebase to correctly display remaining debt, also need to check if current user owes anything to other user (similar logic to handlePayment?)
 
 // Function to update balances after splitting the bill
-export const updateBalancesAfterSplit = async (selectedHouseholdID, customAmounts, itemsDetails) => { 
+export const updateBalancesAfterSplit = async (selectedHouseholdID, customAmounts, itemsDetails, totalBillAmount) => { 
   try {
     const userId = auth.currentUser.uid;
 
@@ -23,7 +23,8 @@ export const updateBalancesAfterSplit = async (selectedHouseholdID, customAmount
         await setDoc(newTransactionRef, {
           owedBy: memberId,
           owedTo: userId,
-          amount: amount,
+          amount: parseFloat(amount),
+          totalBillAmount: totalBillAmount,
           repaymentAmount: 0, // initalize repayment amount to 0
           repayments: [],
           itemsDetails: itemsDetails,
@@ -265,9 +266,12 @@ export default function BalancesScreen() {
       // Calculate total debt and collect balance data
       balancesSnapshot.docs.forEach((doc) => {
         const balanceData = doc.data();
-        totalRemainingDebt = normalizeFloat(
+        totalRemainingDebt = parseFloat(
           totalRemainingDebt + (balanceData.amount || 0) - (balanceData.repaymentAmount || 0)
         );
+        console.log("total remaining debt:", totalRemainingDebt);
+        console.log("balance amount:", balanceData.amount);
+        console.log("repayment amount:", balanceData.repaymentAmount);
         balances.push({ ...balanceData, id: doc.id, ref: doc.ref });
       });
 
@@ -295,7 +299,7 @@ export default function BalancesScreen() {
   
         const repaymentAmountNumeric = parseFloat(repaymentAmount) || 0;
         const remainingPaymentNumeric = parseFloat(remainingPayment) || 0;
-        const newRepaymentAmount = normalizeFloat(repaymentAmountNumeric + remainingPaymentNumeric);
+        const newRepaymentAmount = parseFloat(repaymentAmountNumeric + remainingPaymentNumeric);
         console.log(newRepaymentAmount);
   
         if (newRepaymentAmount >= amount) {
@@ -416,7 +420,7 @@ export default function BalancesScreen() {
       // Calculate total debt
       balancesSnapshot.docs.forEach((doc) => {
         const balanceData = doc.data();
-        totalRemainingDebt = normalizeFloat(
+        totalRemainingDebt = parseFloat(
           totalRemainingDebt + (balanceData.amount || 0) - (balanceData.repaymentAmount || 0)
         );
       });
@@ -572,9 +576,11 @@ export default function BalancesScreen() {
               owedToUsername:
                 householdMembers.find((member) => member.uid === balance.owedTo)?.name || balance.owedTo,
               remainingAmount,
+              amount: balance.amount,
               itemDetails: balance.itemsDetails || [],
               repayments: balance.repayments || [], // Include repayments array
               createdAt: balance.createdAt,
+              totalBillAmount: balance.totalBillAmount || 0,
               status: balance.status || 'active',
             };
           });
@@ -583,18 +589,25 @@ export default function BalancesScreen() {
           let transactions = balancesData.flatMap((balance) => {
             const itemDetailsArray = balance.itemDetails.filter((item) => item.itemName && item.cost > 0);
   
-            // Map item transactions
-            const itemTransactions = itemDetailsArray.map((item) => ({
-              id: `${balance.id}-${item.itemName}`, // Unique ID for each item transaction
-              type: 'item',
-              owedBy: balance.owedBy,
-              owedTo: balance.owedTo,
-              owedByUsername: balance.owedByUsername,
-              owedToUsername: balance.owedToUsername,
-              itemName: item.itemName,
-              amount: item.cost,
-              createdAt: balance.createdAt,
-            }));
+            // Map item transactions with proportional contributions
+            const itemTransactions = itemDetailsArray.map((item) => {
+              const totalBillAmount = balance.totalBillAmount || 1; // Avoid division by zero
+              const itemProportion = item.cost / totalBillAmount;
+              const proportionalContribution = itemProportion * balance.amount; // change to balance.remainingAmount if want to see updated changes to '+$/-$' in return statement
+
+              return {
+                id: `${balance.id}-${item.itemName}`, // Unique ID for each item transaction
+                type: 'item',
+                owedBy: balance.owedBy,
+                owedTo: balance.owedTo,
+                owedByUsername: balance.owedByUsername,
+                owedToUsername: balance.owedToUsername,
+                itemName: item.itemName,
+                amount: item.cost,
+                proportionalContribution, // Add proportional contribution
+                createdAt: balance.createdAt,
+              };
+            });
   
             // Map repayment transactions
             const repaymentTransactions = balance.repayments.map((repayment, index) => ({
@@ -684,6 +697,108 @@ export default function BalancesScreen() {
           <Text style={styles.noDebtMessage}>All debts are settled!</Text>
         </View>
       )}
+  
+      {/* Balances List */}
+      {selectedHouseholdId ? (
+        <FlatList
+          data={transactions}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            // Handle repayment transactions
+            if (item.type === 'repayment') {
+              return (
+                <View style={[styles.transactionCard, styles.repaymentTransaction]}>
+                  <Text style={styles.transactionDescription}>
+                    Repayment of ${normalizeFloat(item.amount)} from {item.owedByUsername} to {item.owedToUsername}
+                  </Text>
+                  <Text style={styles.transactionMethod}>
+                    Method: {item.paymentMethod === 'paypal' ? 'PayPal' : 'Cash'}
+                  </Text>
+                  <Text style={styles.transactionDate}>
+                    Date: {item.createdAt
+                      ? item.createdAt instanceof Date
+                        ? `${item.createdAt.toLocaleDateString('en-US')} ${item.createdAt.toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}` 
+                        : typeof item.createdAt.toDate === 'function'
+                        ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}`
+                        : `${new Date(item.createdAt).toLocaleDateString('en-US')} ${new Date(item.createdAt).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}`
+                      : 'Unknown date'}
+                  </Text>
+                </View>
+              );
+            }
+  
+            // Handle item transactions
+            if (item.type === 'item') {
+              return (
+                <View
+                  style={[
+                    styles.transactionCard,
+                    item.owedBy === auth.currentUser.uid ? styles.splitTransaction : styles.receivedTransaction,
+                  ]}
+                >
+                  <Text style={styles.transactionDescription}>
+                    {item.itemName ? `${item.itemName}: $${item.amount.toFixed(2)}` : 'No details available'}
+                  </Text>
+                  <Text style={styles.transactionPayer}>
+                    Paid by: {item.owedByUsername || 'Unknown'}
+                  </Text>
+                  <Text style={styles.transactionPayee}>
+                    Owed to: {item.owedToUsername || 'Unknown'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.transactionAmount,
+                      item.owedBy === auth.currentUser.uid ? styles.negativeAmount : styles.positiveAmount,
+                    ]}
+                  >
+                    {item.proportionalContribution !== undefined && !isNaN(item.proportionalContribution)
+                      ? item.owedBy === auth.currentUser.uid
+                        ? `-$${item.proportionalContribution.toFixed(2)}`
+                        : `+$${item.proportionalContribution.toFixed(2)}`
+                      : '$0.00'
+                    }
+                  </Text>
+                  <Text style={styles.transactionDate}>
+                    Date: {item.createdAt
+                      ? item.createdAt instanceof Date
+                        ? `${item.createdAt.toLocaleDateString('en-US')} ${item.createdAt.toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}`
+                        : typeof item.createdAt.toDate === 'function'
+                        ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}`
+                        : `${new Date(item.createdAt).toLocaleDateString('en-US')} ${new Date(item.createdAt).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}`
+                      : 'Unknown date'}
+                  </Text>
+                </View>
+              );
+            }
+  
+            return null;
+          }}
+          contentContainerStyle={styles.transactionContainer}
+        />
 
       <View style={styles.buttonRow}>
         {selectedHouseholdId && (

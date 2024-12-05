@@ -314,8 +314,8 @@ export default function HomeScreen() {
 
   setTotalCost(calculatedCost);
 
-  console.log('Total Cost:', totalCost);
-  const splitAmount = parseFloat((totalCost / (selectedMembers.length + 1)).toFixed(2));
+  console.log('Total Cost:', calculatedCost);
+  const splitAmount = parseFloat((calculatedCost / (selectedMembers.length + 1)).toFixed(2));
   console.log('Split Amount:', splitAmount);
   
     // Initialize customAmounts with default splitAmount
@@ -334,10 +334,10 @@ export default function HomeScreen() {
   };
   
   // Function to proceed with splitting the bill after custom amounts are set
-  const proceedWithSplitBill = async (totalCost) => {
+  const proceedWithSplitBill = async () => {
     try {
       console.log("Function updated");
-      await updateBalancesAfterSplit(selectedHouseholdID, customAmounts, selectedItems);
+      await updateBalancesAfterSplit(selectedHouseholdID, customAmounts, selectedItems, totalCost);
 
       console.log("Function updated");
       // Remove split items from the list after they are split
