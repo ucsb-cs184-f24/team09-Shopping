@@ -119,7 +119,7 @@ export default function HouseholdDetailsScreen({ route, navigation }) {
                     <View style={styles.qrCodeContainer}>
                         <QRCode 
                             value={householdId} // Use household ID as the value
-                            size={230}          // Customize size as needed
+                            size={200}          // Customize size as needed
                         />
                     </View>
                     <TouchableOpacity style={styles.leaveButton} onPress={confirmLeaveHousehold}>

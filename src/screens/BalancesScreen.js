@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { collection, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import { WebView } from 'react-native-webview';
+import { PaymentIcon } from 'react-native-payment-icons';
 
 // TODO (COMPLETE): If user to pay does not have PayPal Account, alert user that other user needs to create PayPal account under their profile email
 // TODO: Subtract amount paid in firebase to correctly display remaining debt, also need to check if current user owes anything to other user (similar logic to handlePayment?)
@@ -531,12 +532,6 @@ export default function BalancesScreen() {
 
   
   // Fetch balance details whenever selected household changes
-
-
-
-
-
-
   useEffect(() => {
     if (selectedHouseholdId) {
       const balancesRef = query(
@@ -661,33 +656,35 @@ export default function BalancesScreen() {
   
   
 
-  
-
-
-
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container}>
       {/* Header Section */}
-      <Text style={styles.title}>Household Balances</Text>
+      <View style={styles.screenHeader}>
+          <Text style={styles.title}>
+              Household Balances
+          </Text>
+      </View>
   
       {/* Dropdown for selecting household */}
-      <DropDownPicker
-        open={isDropdownOpen}
-        value={selectedHouseholdId}
-        items={householdItems}
-        setOpen={setIsDropdownOpen}
-        setValue={setSelectedHouseholdId}
-        setItems={setHouseholdItems}
-        placeholder="Select Household"
-        style={styles.dropdown}
-        dropDownContainerStyle={styles.dropdownContainer}
-        listMode="SCROLLVIEW"
-      />
+      <View style={styles.ddcontainer}>
+        <DropDownPicker
+          open={isDropdownOpen}
+          value={selectedHouseholdId}
+          items={householdItems}
+          setOpen={setIsDropdownOpen}
+          setValue={setSelectedHouseholdId}
+          setItems={setHouseholdItems}
+          placeholder="Select Household"
+          style={styles.dropdown}
+          dropDownContainerStyle={styles.dropdownContainer}
+          listMode="SCROLLVIEW"
+        />
+      </View>
   
       {/* Net Balances Section */}
       {netBalances.length > 0 ? (
-        <View style={styles.netBalancesContainer}>
+        <View style={styles.messageContainer}>
           {netBalances.map((balance, index) => (
             <Text key={index} style={styles.netBalanceText}>
               {balance.owedByUsername} owes {balance.owedToUsername}: $
@@ -696,7 +693,9 @@ export default function BalancesScreen() {
           ))}
         </View>
       ) : (
-        <Text style={styles.noDebtMessage}>All debts are settled!</Text>
+        <View style={styles.messageContainer}>
+          <Text style={styles.noDebtMessage}>All debts are settled!</Text>
+        </View>
       )}
   
       {/* Balances List */}
@@ -801,10 +800,6 @@ export default function BalancesScreen() {
           contentContainerStyle={styles.transactionContainer}
         />
 
-      ) : (
-        <Text style={styles.noHouseholdSelectedText}>Please select a household to view balances.</Text>
-      )}
-  
       <View style={styles.buttonRow}>
         {selectedHouseholdId && (
           <>
@@ -823,11 +818,118 @@ export default function BalancesScreen() {
                 setIsAmountModalVisible(true);
               }}
             >
-              <Text style={styles.payPalButtonText}>Pay with PayPal</Text>
+              <PaymentIcon type='paypal'/>
             </TouchableOpacity>
           </>
         )}
       </View>
+
+      {/* Balances List */}
+      {selectedHouseholdId ? (
+        <View style={styles.netBalancesContainer}>
+          <FlatList
+            data={transactions}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => {
+              // Handle repayment transactions
+              if (item.type === 'repayment') {
+                return (
+                  <View style={[styles.transactionCard, styles.repaymentTransaction]}>
+                    <Text style={styles.transactionDescription}>
+                      Repayment of ${normalizeFloat(item.amount)} from {item.owedByUsername} to {item.owedToUsername}
+                    </Text>
+                    <Text style={styles.transactionMethod}>
+                      Method: {item.paymentMethod === 'paypal' ? 'PayPal' : 'Cash'}
+                    </Text>
+                    <Text style={styles.transactionDate}>
+                      Date: {item.createdAt
+                        ? item.createdAt instanceof Date
+                          ? `${item.createdAt.toLocaleDateString('en-US')} ${item.createdAt.toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}` 
+                          : typeof item.createdAt.toDate === 'function'
+                          ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}`
+                          : `${new Date(item.createdAt).toLocaleDateString('en-US')} ${new Date(item.createdAt).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}`
+                        : 'Unknown date'}
+                    </Text>
+                  </View>
+                );
+              }
+    
+              // Handle item transactions
+              if (item.type === 'item') {
+                return (
+                  <View
+                    style={[
+                      styles.transactionCard,
+                      item.owedBy === auth.currentUser.uid ? styles.splitTransaction : styles.receivedTransaction,
+                    ]}
+                  >
+                    <Text style={styles.transactionDescription}>
+                      {item.itemName ? `${item.itemName}: $${item.amount.toFixed(2)}` : 'No details available'}
+                    </Text>
+                    <Text style={styles.transactionPayer}>
+                      Paid by: {item.owedByUsername || 'Unknown'}
+                    </Text>
+                    <Text style={styles.transactionPayee}>
+                      Owed to: {item.owedToUsername || 'Unknown'}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.transactionAmount,
+                        item.owedBy === auth.currentUser.uid ? styles.negativeAmount : styles.positiveAmount,
+                      ]}
+                    >
+                      {item.amount !== undefined && !isNaN(item.amount)
+                        ? item.owedBy === auth.currentUser.uid
+                          ? `-$${(Math.abs(parseFloat(item.amount)) / householdMembersCount).toFixed(2)}`
+                          : `+$${(parseFloat(item.amount) / householdMembersCount).toFixed(2)}`
+                        : '$0.00'}
+                    </Text>
+                    <Text style={styles.transactionDate}>
+                      Date: {item.createdAt
+                        ? item.createdAt instanceof Date
+                          ? `${item.createdAt.toLocaleDateString('en-US')} ${item.createdAt.toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}`
+                          : typeof item.createdAt.toDate === 'function'
+                          ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}`
+                          : `${new Date(item.createdAt).toLocaleDateString('en-US')} ${new Date(item.createdAt).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}`
+                        : 'Unknown date'}
+                    </Text>
+                  </View>
+                );
+              }
+    
+              return null;
+            }}
+            contentContainerStyle={styles.transactionContainer}
+          />
+        </View>
+
+      ) : (
+        <Text style={styles.noHouseholdSelectedText}>Please select a household to view balances.</Text>
+      )}
 
 
       {/* Record Payment Modal */}
@@ -873,7 +975,7 @@ export default function BalancesScreen() {
         <Modal visible={isAmountModalVisible} transparent={true} animationType="slide">
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Enter Payment Amount</Text>
+              <Text style={styles.modalTitle}>Pay with PayPal</Text>
               {/* Dropdown for Member Selection */}
               <TextInput
                 style={styles.input}
@@ -888,7 +990,7 @@ export default function BalancesScreen() {
                 items={householdMembers}
                 setOpen={setIsDropdownOpen}
                 setValue={setSelectedMember}
-                placeholder="Select a member"
+                placeholder="Select a member to pay"
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropdownContainer}
                 listMode="SCROLLVIEW"
@@ -969,40 +1071,60 @@ export default function BalancesScreen() {
           </View>
         </Modal>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );  
 }  
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#f5f5f5',
-    paddingTop: 40,
+    backgroundColor: "white"
+  },
+  screenHeader: {
+    flexDirection: 'row',
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    marginTop: 80,
+    marginLeft: 20,
     fontFamily: "Avenir",
-    textAlign: 'center',
-    color: '#003366',
-    marginBottom: 20,
+    opacity: 0.5,
+  },
+  ddcontainer: {
+    padding: 20,
   },
   dropdown: {
     borderColor: '#ccc',
-    height: 50,
-    marginBottom: 20,
+    fontFamily: 'Avenir'
   },
   dropdownContainer: {
     borderColor: '#ccc',
     borderRadius: 8,
+  },
+  messageContainer: {
+    paddingLeft: 20
+  },
+  noDebtMessage: {
+    fontFamily: 'Avenir',
+    fontSize: 16,
+    fontWeight: "bold"
+  },
+  netBalancesContainer: {
+    backgroundColor: '#ECECEC',
+    borderRadius: 8,
+    padding: 15,
+    margin: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5, 
+    gap: 6,
   },
   listItem: {
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
     backgroundColor: '#ffffff',
-    marginBottom: 5,
+    // marginBottom: 5,
     borderRadius: 4,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1034,17 +1156,35 @@ const styles = StyleSheet.create({
     marginVertical: 30,
   },
   recordPaymentButton: {
-    alignSelf: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: '#008F7A',
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginVertical: 8,
+    width: '45%'
+  },
+  payPalButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: '#0000FF',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
     marginVertical: 8,
+    width: '45%'
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontFamily: 'Avenir'
   },
   recordPaymentButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+    fontFamily: 'Avenir',
   },
   modalContainer: {
     flex: 1,
@@ -1061,11 +1201,13 @@ const styles = StyleSheet.create({
     
   },
   modalTitle: {
+    fontFamily: 'Avenir',
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
   },
   input: {
+    // fontFamily: 'Avenir',
     width: '100%',
     borderWidth: 1,
     borderColor: '#ccc',
@@ -1075,7 +1217,6 @@ const styles = StyleSheet.create({
   },
   transactionCard: {
     backgroundColor: '#ffffff',
-    marginBottom: 12,
     width: '114%', // Set a narrower width, adjustable as needed
     paddingVertical: 8,
     paddingHorizontal: 10,
@@ -1084,7 +1225,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    marginBottom: 5,
+    marginBottom: 6,
     elevation: 2,
     borderLeftWidth: 6,
     alignSelf: 'center',
@@ -1097,36 +1238,42 @@ const styles = StyleSheet.create({
     borderLeftColor: '#4CAF50', // Green color for received transactions
   },
   transactionDescription: {
+    fontFamily: 'Avenir',
     fontSize: 14,
     color: '#333',
     fontWeight: '600',
     marginBottom: 4,
   },
   transactionPayer: {
+    fontFamily: 'Avenir',
     fontSize: 13,
     color: '#555',
     fontWeight: '500',
     marginBottom: 3,
   },
   transactionPayee: {
+    fontFamily: 'Avenir',
     fontSize: 13,
     color: '#555',
     fontWeight: '500',
     marginBottom: 3,
   },
   transactionAmount: {
+    fontFamily: 'Avenir',
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'right',
-    marginTop: 6,
+    // marginTop: 6,
   },
   transactionDate: {
+    fontFamily: 'Avenir',
     fontSize: 11,
     color: '#999',
     marginTop: 5,
     textAlign: 'right',
   },
   transactionMethod: {
+    fontFamily: 'Avenir',
     fontSize: 14,     
     color: '#6b7280',
     fontStyle: 'italic',
@@ -1134,12 +1281,13 @@ const styles = StyleSheet.create({
   },
   transactionContainer: {
     paddingHorizontal: 20,
-    paddingTop: 20,
   },
   negativeAmount: {
+    fontFamily: 'Avenir',
     color: '#d9534f', // Red color for negative values
   },
   positiveAmount: {
+    fontFamily: 'Avenir',
     color: '#4CAF50',
   },
   footer: {
@@ -1150,6 +1298,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   netBalanceText: {
+    fontFamily: 'Avenir',
     fontSize: 14,
     color: '#003366',
     fontWeight: '600',
@@ -1170,25 +1319,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#FF5252',
+    backgroundColor: '#DF0808',
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    marginLeft: 10, // Add spacing between buttons
+    marginLeft: 10,
     alignItems: 'center',
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  payPalButton: {
-    alignSelf: 'center',
-    backgroundColor: '#0000FF',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginVertical: 8,
+    margin: 20,
+    marginTop: 12,
+    marginBottom: 0,
   },
   webViewContainer: {
     flex: 1,
@@ -1198,6 +1341,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   payPalButtonText: {
+    fontFamily: 'Avenir',
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
