@@ -248,13 +248,13 @@ export default function CreateHouseholdScreen({ navigation }) {
                                 </View>
                                 <View style={styles.modalButtonContainer}>
                                     <TouchableOpacity
-                                        style={styles.actionButtonWrapper}
+                                        style={styles.createButton}
                                         onPress={() => createHousehold()}
                                     >
                                         <Text style={styles.buttonWithIcon}>Create!</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={styles.actionButtonWrapper2}
+                                        style={styles.cancelButton}
                                         onPress={() => {
                                             setHouseholdModalVisible(false);
                                             setErrorMessage(""); // Clear error message on Cancel
@@ -296,6 +296,7 @@ const styles = StyleSheet.create({
         marginLeft: 20,
         fontFamily: "Avenir",
         opacity: 0.5,
+        fontWeight: "bold",
     },
     householdContainer: {
         backgroundColor: "#ECECEC", // Secondary Color
@@ -402,13 +403,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center'
     },
-
     modalButtonContainer: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginTop: 5,
+    },
+    createButton: {
+        backgroundColor: '#4CAF50',
+        flex: 1,
+        padding: 15,
+        borderRadius: 8,
+        marginRight: 10, // Add spacing between buttons
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        marginTop: 2,
+      },
+    cancelButton: {
+        backgroundColor: '#DF0808',
+        flex: 1,
+        padding: 15,
+        borderRadius: 8,
+        marginLeft: 10, // Add spacing between buttons
+        alignItems: 'center',
     },
     buttonWithIcon: {
         color: "#FFF",
@@ -466,9 +481,11 @@ const styles = StyleSheet.create({
     },
     householdModal: {
         backgroundColor: '#fff',
+        justifyContent: "center",
         padding: 20,
         borderRadius: 10,
         margin: 20,
+        alignItems: "center",
         elevation: 5, // Shadow for Android
         shadowColor: '#000', // Shadow for iOS
         shadowOffset: { width: 0, height: 2 },
@@ -477,12 +494,12 @@ const styles = StyleSheet.create({
     },
     modalHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        // justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 20,
     },
     modalTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
         fontFamily: "Avenir",
     },

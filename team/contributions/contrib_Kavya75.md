@@ -1,2 +1,9 @@
-- Set up Firebase https://github.com/ucsb-cs184-f24/team09-Shopping/pull/38 and implemented functionality to check off list items on the shopping list page 
-- Worked on the UI components and designing mockups for the app flow
+- Set up Firebase https://github.com/ucsb-cs184-f24/team09-Shopping/pull/38 initially and implemented functionality to check off list items on the shopping list page https://github.com/ucsb-cs184-f24/team09-Shopping/pull/50
+- Worked on brainstorming ideas for our app and providing ways to make the app more usable
+- Implemeneted functionality for user to upload their profile picture https://github.com/ucsb-cs184-f24/team09-Shopping/pull/98
+- Established design system to standardize design components and provide a seamless experience for the user.
+- Conducted design experiments for the UI of the app. https://github.com/ucsb-cs184-f24/team09-Shopping/pull/78
+- Created hi-fi design mockups through Figma: https://www.figma.com/design/Be6R1GrzOaWAKojh5b10Mi/CartShare-Specs?node-id=0-1&t=PmweGzcHVfQrD0QD-1
+- Updated team members on my mockup designs and requested feedback from team members on mockups before implementation.
+- Tested PRs and provided feedback on issues that needed to be resolved.
+- Implemented the mockups for log in screen, register screen, home screen, balances screen, join household screen, household details screen, and profile screen. https://github.com/ucsb-cs184-f24/team09-Shopping/pull/98 https://github.com/ucsb-cs184-f24/team09-Shopping/pull/120 https://github.com/ucsb-cs184-f24/team09-Shopping/pull/137
