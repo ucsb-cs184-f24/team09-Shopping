@@ -282,6 +282,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderColor: '#ccc',
     height: 50,
+    fontFamily: 'Avenir',
     backgroundColor: '#fff',
   },
   dropdownContainer: {
@@ -296,6 +297,7 @@ const styles = StyleSheet.create({
   timeRangeButton: {
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'Avenir',
     color: '#555',
     padding: 10,
     borderWidth: 1,
@@ -307,6 +309,7 @@ const styles = StyleSheet.create({
   },
   selectedButton: {
     backgroundColor: '#008f7a',
+    fontFamily: 'Avenir',
     color: '#fff',
     borderColor: '#008f7a',
   },
@@ -331,11 +334,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     textAlign: 'center',
+    fontFamily: 'Avenir',
     fontSize: 16,
     color: '#888',
   },
   noDataText: {
     textAlign: 'center',
+    fontFamily: 'Avenir',
     fontSize: 16,
     color: '#888',
   },
