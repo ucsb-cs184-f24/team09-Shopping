@@ -45,6 +45,7 @@
 - Implement a filter feature for the shopping list. Users can filter out the list items by category. The category list options are dynamicly updated with the shopping list.
 - Implement the edit/delete functionality. Users can swipe left on each shopping list and choose to edit or delete each item.
 - Build a Summary page where users can see an overview of all the items they purchased in the households. Users can set the summary period to weekly/monthly/yearly and get a detailed histogram and pie chart representing the cost they spent and cost ratio on differen categories.
+- Implement the logic for the items that are splitted by users. After items are splitted, the items are marked as splitted and moved to a bottom section on the homescreen so that users can see the items that are splitted.
 - Refine overall UI details and specific code logics, such as adding an item with price being optional.
 
 ## Kenisha
@@ -54,3 +55,7 @@
 - Worked on splitting the bill feature with equal cost distribution, making expense sharing intuitive and easy.
 - I worked on documentation like the design document, the user manual, and the product backlog, I also 2 retrospectives.
 - I had a total of 7 PRs that I worked on (15 Issues) and reviewed over 15 PRs
+
+
+## Discussion on the Contributors Graph
+- For our team, the contributor graph does present the code contributions for some team members, specifically for those who set their git configurations correctly. **However**, for other team members who set git config email different from their GitHub email, the graph does not accurately represent their contributions. For example, the graph does not show the accurate ammount of contributions of Wenxuan, Kenisha, and Amisra, who has made a number of branches and PRs, but the graph does not show this since the git email set on their local machines is different from the GitHub email. This can be proven by looking at the contributors of their corresponding branches and PRs.
