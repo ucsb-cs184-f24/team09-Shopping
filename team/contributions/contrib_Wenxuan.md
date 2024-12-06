@@ -1,0 +1,5 @@
+- Create basic shopping list ui frontend and ui. Users can add a named item to the shopping list.
+- Implement a filter feature for the shopping list. Users can filter out the list items by category. The category list options are dynamicly updated with the shopping list.
+- Implement the edit/delete functionality. Users can swipe left on each shopping list and choose to edit or delete each item.
+- Build a Summary page where users can see an overview of all the items they purchased in the households. Users can set the summary period to weekly/monthly/yearly and get a detailed histogram and pie chart representing the cost they spent and cost ratio on differen categories.
+- Refine overall UI details and specific code logics, such as adding an item with price being optional.
