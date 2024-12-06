@@ -2,4 +2,5 @@
 - Implement a filter feature for the shopping list. Users can filter out the list items by category. The category list options are dynamicly updated with the shopping list.
 - Implement the edit/delete functionality. Users can swipe left on each shopping list and choose to edit or delete each item.
 - Build a Summary page where users can see an overview of all the items they purchased in the households. Users can set the summary period to weekly/monthly/yearly and get a detailed histogram and pie chart representing the cost they spent and cost ratio on differen categories.
+- Implement the logic for the items that are splitted by users. After items are splitted, the items are marked as splitted and moved to a bottom section on the homescreen so that users can see the items that are splitted.
 - Refine overall UI details and specific code logics, such as adding an item with price being optional.
