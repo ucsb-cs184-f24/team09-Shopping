@@ -6,6 +6,9 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useFocusEffect } from '@react-navigation/native';
 import { db, auth } from '../../firebaseConfig';
 import { getISOWeek } from 'date-fns';
+import { ScrollView, Dimensions } from 'react-native';
+
+
 
 export default function SummaryPage() {
   const [households, setHouseholds] = useState([]);
@@ -17,13 +20,22 @@ export default function SummaryPage() {
   const [chartData, setChartData] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  const presetColors = [
+    '#91d1c8', // light blue
+    '#098372',
+    '#9b91d1', // light purple
+    '#91d197', // light green
+    '#d59df9', //
+    '#577d5b', // dark green
+    '#418279', // dark teal
+    '#40328c', // dark purple
+  ];
   const chartConfig = {
     backgroundColor: '#ffffff',
     backgroundGradientFrom: '#ffffff',
     backgroundGradientTo: '#ffffff',
     decimalPlaces: 2,
-    color: (opacity = 1) => `rgba(63, 81, 181, ${opacity})`,
+    color: (opacity = 1) => `rgba(0, 143, 122, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
     style: {
       borderRadius: 8,
@@ -143,12 +155,7 @@ export default function SummaryPage() {
     }));
   };
 
-  const generateColor = () => {
-    return `#${Math.floor(Math.random() * 16777215)
-      .toString(16)
-      .padStart(6, '0')}`; // Ensure 6 characters
-  };
-
+  
   const processCategoryData = (items) => {
     const groupedData = {};
 
@@ -158,11 +165,11 @@ export default function SummaryPage() {
       groupedData[category] = (groupedData[category] || 0) + cost;
     });
 
-    return Object.keys(groupedData).map((key) => ({
+    return Object.keys(groupedData).map((key, index) => ({
       label: key,
       cost: groupedData[key],
       name: `${key} ($${groupedData[key].toFixed(2)})`,
-      color: generateColor(),
+      color: presetColors[index % presetColors.length],
       legendFontColor: '#333',
       legendFontSize: 14,
     }));
@@ -220,6 +227,7 @@ export default function SummaryPage() {
               ) : chartData.length > 0 ? (
                 <>
                   <View style={styles.chartContainer}>
+                  <ScrollView horizontal>
                     <BarChart
                       data={{
                         labels: chartData.map((d) => d.label),
@@ -228,22 +236,26 @@ export default function SummaryPage() {
                       width={350} // Fixed width for chart
                       height={220}
                       chartConfig={chartConfig}
+                      
                       style={styles.chart}
                     />
+                    </ScrollView>
                   </View>
 
                   <View style={styles.chartContainer}>
+                  <ScrollView horizontal>
                     <PieChart
                       data={categoryData}
-                      width={350}
+                      width={550} // Adjust width as needed
                       height={220}
                       chartConfig={chartConfig}
                       accessor="cost"
                       backgroundColor="transparent"
-                      paddingLeft="15"
-                      absolute
-                      style={styles.chart}
+                      paddingLeft="-15"
+                      
+                      style={[styles.chart, { marginRight: -10 }]}
                     />
+                  </ScrollView>
                   </View>
                 </>
               ) : (
@@ -270,6 +282,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderColor: '#ccc',
     height: 50,
+    fontFamily: 'Avenir',
     backgroundColor: '#fff',
   },
   dropdownContainer: {
@@ -284,6 +297,7 @@ const styles = StyleSheet.create({
   timeRangeButton: {
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'Avenir',
     color: '#555',
     padding: 10,
     borderWidth: 1,
@@ -294,9 +308,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
   },
   selectedButton: {
-    backgroundColor: '#3F51B5',
+    backgroundColor: '#008f7a',
+    fontFamily: 'Avenir',
     color: '#fff',
-    borderColor: '#3F51B5',
+    borderColor: '#008f7a',
   },
   card: {
     backgroundColor: '#fff',
@@ -312,17 +327,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 20,
+    
   },
   chart: {
     borderRadius: 8,
   },
   loadingText: {
     textAlign: 'center',
+    fontFamily: 'Avenir',
     fontSize: 16,
     color: '#888',
   },
   noDataText: {
     textAlign: 'center',
+    fontFamily: 'Avenir',
     fontSize: 16,
     color: '#888',
   },
