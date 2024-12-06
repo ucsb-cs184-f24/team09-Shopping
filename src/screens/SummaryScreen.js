@@ -191,6 +191,8 @@ export default function SummaryPage() {
               placeholder="Select Household"
               style={styles.dropdown}
               dropDownContainerStyle={styles.dropdownContainer}
+              textStyle={styles.dropdownText} // Apply font to dropdown text
+              placeholderStyle={styles.dropdownPlaceholder}
             />
             <View style={styles.buttonGroup}>
               <Text
@@ -287,6 +289,7 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     borderColor: '#ccc',
+    fontFamily: 'Avenir',
     zIndex: 1000,
   },
   buttonGroup: {
@@ -343,5 +346,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Avenir',
     fontSize: 16,
     color: '#888',
+  },
+  dropdownText: {
+    fontFamily: 'Avenir', // Apply your desired font
+    fontSize: 16,
+    color: '#333', // Color for the dropdown text
+  },
+  dropdownPlaceholder: {
+    fontFamily: 'Avenir', // Apply your desired font
+    fontSize: 16,
+    color: '#aaa', // Placeholder text color
   },
 });
