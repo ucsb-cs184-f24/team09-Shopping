@@ -75,6 +75,7 @@ export default function HomeScreen() {
   const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
   const [costModalVisible, setCostModalVisible] = useState(false); // Bool of modal visibility
   const [addItemModalVisible, setAddItemModalVisible] = useState(false);
+  const [splitModalVisible, setsplitModalVisible] = useState(false);
 
   // Dropdown picker states
   const [selectHouseHoldDropdown, setSelectHouseHoldDropdown] = useState(false);
@@ -85,6 +86,7 @@ export default function HomeScreen() {
   const [currentItemForCost, setCurrentItemForCost] = useState(null);
   const [inputCost, setInputCost] = useState('');
   const [customAmounts, setCustomAmounts] = useState({});
+  const [splitStep, setSplitStep] = useState('members')
 
   // State to track split items visibility
   const [showSplittedItems, setShowSplittedItems] = useState(false);
@@ -427,9 +429,10 @@ export default function HomeScreen() {
   };
 
   // Function to proceed with splitting the bill after custom amounts are set
-  const proceedWithSplitBill = async (totalCost) => {
+  const proceedWithSplitBill = async () => {
     try {
-      await updateBalancesAfterSplit(selectedHouseholdID, customAmounts, selectedItems);
+      console.log("Function updated");
+      await updateBalancesAfterSplit(selectedHouseholdID, customAmounts, selectedItems, totalCost);
 
       // Mark split items as split instead of deleting
       for (const item of selectedItems) {
@@ -538,18 +541,17 @@ export default function HomeScreen() {
         {/* Shopping List Header */}
         <View style={styles.shoppingListHeader}>
           <Text style={styles.shoppingListTitle}>Shopping List</Text>
-          <View style={styles.headerButtons}>
-            {/* Add Item Button */}
+          <View style={styles.headerButtonsContainer}>
             <TouchableOpacity
-              style={styles.addButton}
+              style={styles.headerButton}
               onPress={() => setAddItemModalVisible(true)}
             >
-              <Text style={styles.addButtonText}>+ Add Item</Text>
+              <Text style={styles.headerButtonText}>+ Add Item</Text>
             </TouchableOpacity>
 
             {/* Split Bill Button */}
             <TouchableOpacity
-              style={styles.splitButton}
+              style={styles.headerButton}
               onPress={() => {
                 if (!selectedHouseholdID) {
                   Alert.alert('Error', 'Please choose a household.');
@@ -561,11 +563,11 @@ export default function HomeScreen() {
                     'You need at least one other member in the household to split the bill.'
                   );
                 } else {
-                  setSplitMembersModalVisible(true);
+                  setsplitModalVisible(true);
                 }
               }}
             >
-              <Text style={styles.splitButtonText}>Split</Text>
+              <Text style={styles.headerButtonText}>Split</Text>
             </TouchableOpacity>
 
             {/* Filter Button */}
@@ -590,12 +592,12 @@ export default function HomeScreen() {
           renderItem={({ item }) => (
             <Swipeable
               renderRightActions={() => (
-                <View style={{ flexDirection: 'row' }}>
+                <View style={styles.actionsContainer}>
                   <TouchableOpacity
                     style={styles.editButton}
                     onPress={() => openEditModal(item)}
                   >
-                    <Text style={styles.buttonText}>Edit</Text>
+                    <Text style={styles.actionText}>Edit</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -608,14 +610,8 @@ export default function HomeScreen() {
               )}
             >
               <View style={styles.listItem}>
-                <View style={styles.textContainer}>
-                  <Text
-                    style={[
-                      styles.itemName,
-                      item.isPurchased && styles.purchasedText,
-                      item.isSplit && styles.splitText, // Style for split items if needed
-                    ]}
-                  >
+                <View style={styles.rowContainer}>
+                  <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
                     {item.itemName} - ${item.cost}
                   </Text>
                   <Text
@@ -707,7 +703,7 @@ export default function HomeScreen() {
                 )}
               >
                 <View style={styles.listItem}>
-                  <View style={styles.textContainer}>
+                  <View style={styles.rowContainer}>
                     <Text
                       style={[
                         styles.itemName,
@@ -763,77 +759,6 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Modal for selecting members to split */}
-      <Modal
-        visible={splitMembersModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setSplitMembersModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.splitModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
-              <View style={{ paddingBottom: 13 }}>
-                <Button
-                  title="Close"
-                  onPress={() => setSplitMembersModalVisible(false)}
-                />
-              </View>
-            </View>
-
-            <FlatList
-              data={householdMembers.filter(
-                (member) => member.uid !== auth.currentUser.uid
-              )}
-              keyExtractor={(item) => item.uid}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={{
-                    padding: 10,
-                    backgroundColor: selectedMembers.includes(item.uid)
-                      ? '#007BFF'
-                      : '#fff',
-                    borderRadius: 4,
-                    marginBottom: 5,
-                  }}
-                  onPress={() => {
-                    setSelectedMembers((prevSelected) =>
-                      prevSelected.includes(item.uid)
-                        ? prevSelected.filter((member) => member !== item.uid)
-                        : [...prevSelected, item.uid]
-                    );
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.memberText,
-                      selectedMembers.includes(item.uid) &&
-                        styles.memberTextSelected,
-                    ]}
-                  >
-                    {item.name ? item.name : 'Unnamed Member'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-
-            <TouchableOpacity
-              style={styles.nextButton}
-              onPress={() => {
-                if (selectedMembers.length === 0) {
-                  Alert.alert('Error', 'Please select at least one member.');
-                } else {
-                  setSplitItemsModalVisible(true);
-                }
-              }}
-            >
-              <Text style={styles.nextButtonText}>Next: Select Items</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       {/* Add Item Modal */}
       <Modal
         visible={addItemModalVisible}
@@ -868,17 +793,17 @@ export default function HomeScreen() {
               keyboardType="numeric"
             />
 
-            <View style={styles.modalButtonContainer}>
+            <View style={styles.modalButtonsContainer}>
               <TouchableOpacity
-                style={styles.actionButtonWrapper}
+                style={styles.modalButtonWrapper}
                 onPress={() => {
                   addItemToList();
                 }}
               >
-                <Text style={styles.buttonText}>Save</Text>
+                <Text style={styles.modalButtonText}>Save</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.actionButtonWrapper2}
+                style={styles.modalButtonWrapper2}
                 onPress={() => {
                   setAddItemModalVisible(false);
                   setNewItemName('');
@@ -886,172 +811,241 @@ export default function HomeScreen() {
                   setNewItemCost('');
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-
-      {/* Modal for selecting items to split */}
+      
+      {/* Modal for splitting */}
       <Modal
-        visible={splitItemsModalVisible}
+        visible={splitModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setSplitItemsModalVisible(false)}
+        onRequestClose={() => setsplitModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.splitModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Items to Split</Text>
-              <Button
-                title="Close"
-                onPress={() => setSplitItemsModalVisible(false)}
-              />
-            </View>
-
-            <FlatList
-              data={shoppingListItems.filter((item) => item.isPurchased)}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
+        {splitStep === 'members' && (
+          <View style={styles.modalContainer}>
+            <View style={styles.splitModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Members to Split Bill</Text>
                 <TouchableOpacity
-                  style={{
-                    padding: 10,
-                    backgroundColor: selectedItems.includes(item)
-                      ? '#007BFF'
-                      : '#fff',
-                    borderRadius: 4,
-                    marginBottom: 5,
-                  }}
                   onPress={() => {
-                    toggleItemSelection(item);
-                  }}
+                    setSplitStep('members');
+                    setSelectedItems([]);
+                    setSelectedMembers([]);
+                    setCustomAmounts({});
+                    setsplitModalVisible(false)}
+                  }
                 >
-                  <Text
-                    style={{
-                      color: selectedItems.includes(item) ? '#fff' : '#000',
-                    }}
-                  >
-                    {item.itemName} - ${item.cost}
+                  <Text style={styles.closeButton1}>
+                    Close
                   </Text>
                 </TouchableOpacity>
-              )}
-            />
-
-            <Button
-              title="Next: Assign Custom Amounts"
-              onPress={() => {
-                if (selectedItems.length === 0) {
-                  Alert.alert('Error', 'Please select at least one item.');
-                } else {
-                  splitBill(); // Initializes customAmounts and shows the custom amount modal
-                  // setShowCustomAmountModal(true); // Already handled inside splitBill
-                }
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal for assigning custom amounts */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showCustomAmountModal}
-        onRequestClose={() => {
-          setShowCustomAmountModal(false);
-        }}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.splitModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Assign Custom Amount</Text>
-              <Button
-                title="Close"
-                onPress={() => setShowCustomAmountModal(false)}
-              />
-            </View>
-
-            <FlatList
-              data={[...selectedMembers, auth.currentUser.uid]}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => {
-                const memberName =
-                  householdMembers.find((member) => member.uid === item)?.name ||
-                  (item === auth.currentUser.uid ? 'You' : 'Unnamed Member');
-                return (
-                  <View
+              </View>
+    
+              <FlatList
+                data={householdMembers.filter((member) => member.uid !== auth.currentUser.uid)}
+                keyExtractor={(item) => item.uid}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      marginBottom: 10,
+                      padding: 10,
+                      backgroundColor: selectedMembers.includes(item.uid) ? '#008F7A' : '#fff',
+                      borderRadius: 4,
+                      marginBottom: 5,
+                    }}
+                    onPress={() => {
+                      setSelectedMembers((prevSelected) =>
+                        prevSelected.includes(item.uid)
+                          ? prevSelected.filter((member) => member !== item.uid)
+                          : [...prevSelected, item.uid]
+                      );
                     }}
                   >
-                    <Text style={{ flex: 1 }}>{memberName}</Text>
-                    <TextInput
-                      style={{
-                        borderWidth: 1,
-                        padding: 5,
-                        width: 100,
-                        borderColor: '#ccc',
-                        borderRadius: 5,
-                      }}
-                      keyboardType="numeric"
-                      value={customAmounts[item]?.toString() || ''}
-                      onChangeText={(value) => {
-                        const newAmounts = { ...customAmounts };
-                        newAmounts[item] = value; // Store raw input
-                        setCustomAmounts(newAmounts);
-                      }}
-                    />
-                  </View>
-                );
-              }}
-            />
+                    <Text
+                      style={[
+                        styles.listText,
+                        selectedMembers.includes(item.uid) && styles.listTextSelected,
+                      ]}
+                    >
+                      {item.name ? item.name : 'Unnamed Member'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
 
-            <Button
-              title="Confirm Split"
-              onPress={() => {
-                const parsedAmounts = {};
-                let invalidInput = false;
-                Object.keys(customAmounts).forEach((key) => {
-                  const amount = parseFloat(customAmounts[key]);
-                  if (isNaN(amount)) {
-                    Alert.alert('Error', 'Please enter valid numeric amounts.');
-                    invalidInput = true;
-                    return;
-                  } else {
-                    parsedAmounts[key] = amount;
-                  }
-                });
-                if (invalidInput) return;
-
-                const totalAssigned = Object.values(parsedAmounts).reduce(
-                  (sum, amount) => sum + amount,
-                  0
-                );
-
-                // Check if the total assigned matches the total cost
-                if (Math.abs(totalAssigned - totalCost) > 0.01) {
-                  // Show an error if the amounts don't match
-                  Alert.alert(
-                    'Error',
-                    `The assigned amounts (${totalAssigned.toFixed(
-                      2
-                    )}) must equal the total cost (${totalCost.toFixed(
-                      2
-                    )}).`
-                  );
-                } else {
-                  setCustomAmounts(parsedAmounts);
-                  proceedWithSplitBill(totalCost);
-                }
-              }}
-            />
+              <View style={styles.nextButtonContainer}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedMembers.length === 0) {
+                      Alert.alert('Error', 'Please select at least one member.');
+                    } else {
+                      setSplitStep('items');
+                    }
+                  }}
+                >
+                  <Text style={styles.nextButtonText}>Next: Select Items</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </View>
-      </Modal>
+        )}
 
+        {splitStep === 'items' && (
+          <View style={styles.modalContainer}>
+            <View style={styles.splitModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Items to Split</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSplitStep('members');
+                    setSelectedItems([]);
+                    setSelectedMembers([]);
+                    setCustomAmounts({});
+                    setsplitModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.closeButton1}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={shoppingListItems.filter((item) => item.isPurchased && !item.isSplit)}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => {
+                  const isSelected = selectedItems.some((selectedItem) => selectedItem.id === item.id);
+                  return (
+                    <TouchableOpacity
+                      style={{
+                        padding: 10,
+                        backgroundColor: isSelected ? '#008F7A' : '#fff',
+                        borderRadius: 4,
+                        marginBottom: 5,
+                      }}
+                      onPress={() => toggleItemSelection(item)}
+                    >
+                      <Text
+                        style={[
+                          styles.listText,
+                          isSelected && styles.listTextSelected,
+                        ]}
+                      >
+                        {item.itemName} - ${item.cost}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+
+              <View style={styles.nextButtonContainer}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedItems.length === 0) {
+                      Alert.alert('Error', 'Please select at least one item.');
+                    } else {
+                      splitBill(); // Initializes customAmounts and shows the custom amount modal
+                      setSplitStep('custom');
+                    }
+                  }}
+                >
+                  <Text style={styles.nextButtonText}>
+                    Next: Assign Custom Amounts
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {splitStep === 'custom' && (
+          <View style={styles.modalContainer}>
+            <View style={styles.splitModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Assign Custom Amount</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSplitStep('members');
+                    setSelectedItems([]);
+                    setSelectedMembers([]);
+                    setCustomAmounts({});
+                    setsplitModalVisible(false)}
+                  }
+                >
+                  <Text style={styles.closeButton1}>
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </View>
+    
+              <FlatList
+                data={[...selectedMembers, auth.currentUser.uid]}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => {
+                  const memberName =
+                    householdMembers.find((member) => member.uid === item)?.name || 'You';
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                      <Text style={styles.nameText}>{memberName || ''}</Text>
+                      <TextInput
+                        style={{ borderWidth: 1, padding: 5, width: 100, borderRadius: 10}}
+                        keyboardType="numeric"
+                        value={customAmounts[item] || ''}
+                        onChangeText={(value) => {
+                          const newAmounts = { ...customAmounts };
+                          newAmounts[item] = value; // Store raw input
+                          setCustomAmounts(newAmounts);
+                        }}
+                      />
+                    </View>
+                  );
+                }}
+              />
+
+              <View style={styles.nextButtonContainer}>
+                <TouchableOpacity
+                  onPress={() => {
+                    const parsedAmounts = {};
+                    let invalidInput = false;
+                    Object.keys(customAmounts).forEach((key) => {
+                    const amount = parseFloat(customAmounts[key]);
+                      if (isNaN(amount)) {
+                        Alert.alert('Error', 'Please enter valid numeric amounts.');
+                        return;
+                      } else {
+                        parsedAmounts[key] = amount;
+                      }
+                    });
+                    const totalAssigned = Object.values(parsedAmounts).reduce(
+                      (sum, amount) => sum + amount,
+                      0
+                    );
+                
+                    // Check if the total assigned matches the total cost
+                    if (Math.abs(totalAssigned - totalCost) > 0.01) {
+                      // Show an error if the amounts don't match
+                      Alert.alert(
+                        'Error',
+                        `The assigned amounts (${totalAssigned.toFixed(2)}) must equal the total cost (${totalCost.toFixed(2)}).`
+                      );
+                    } else {
+                      setSplitStep('members');
+                      setsplitModalVisible(false);
+                      proceedWithSplitBill(totalCost);
+                    }
+                  }}
+                >
+                  <Text style={styles.nextButtonText}>
+                    Confirm Split
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+      </Modal>
+  
       {/* Modal for editing items */}
       <Modal
         visible={editModalVisible}
@@ -1091,23 +1085,23 @@ export default function HomeScreen() {
               onChangeText={setEditItemCost}
               keyboardType="numeric"
             />
-
-            <View style={styles.modalButtonContainer}>
+            
+            <View style={styles.modalButtonsContainer}>
               <TouchableOpacity
-                style={styles.actionButtonWrapper}
+                style={styles.modalButtonWrapper}
                 onPress={() => {
                   saveEdit();
                 }}
               >
-                <Text style={styles.buttonText}>Save</Text>
+                <Text style={styles.modalButtonText}>Save</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.actionButtonWrapper2}
+                style={styles.modalButtonWrapper2}
                 onPress={() => {
                   setEditModalVisible(false);
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1126,10 +1120,13 @@ export default function HomeScreen() {
             {/* Header Row with 'Select a Category' and 'Close' Button */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select a Category</Text>
-              <Button
-                title="Close"
-                onPress={() => setFilterModalVisible(false)}
-              />
+              <View style={{ paddingBottom: 13 }}>
+                <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                  <Text style={styles.closeButton2}>
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <Picker
@@ -1170,9 +1167,9 @@ export default function HomeScreen() {
               onChangeText={setInputCost}
               keyboardType="numeric"
             />
-            <View style={styles.modalButtonContainer}>
+            <View style={styles.modalButtonsContainer}>
               <TouchableOpacity
-                style={styles.actionButtonWrapper}
+                style={styles.modalButtonWrapper}
                 onPress={async () => {
                   try {
                     const itemRef = doc(
@@ -1200,16 +1197,16 @@ export default function HomeScreen() {
                   }
                 }}
               >
-                <Text style={styles.buttonText}>Save</Text>
+                <Text style={styles.modalButtonText}>Save</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.actionButtonWrapper2}
+                style={styles.modalButtonWrapper2}
                 onPress={() => {
                   setCostModalVisible(false);
                   setInputCost('');
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1231,14 +1228,60 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // Buttons
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    padding: 10,
-    marginTop: 10,
+  // Dropdown
+  dropdownContainer: {
+    borderColor: '#ddd',
+    borderRadius: 8,
   },
-  splitButton: {
+  dropdown: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  dropdownPlaceholder: {
+    fontFamily: "Avenir",
+    fontSize: 18,
+    color: '#aaa',
+  },
+  dropdownText: {
+    fontFamily: "Avenir",
+    fontSize: 18,
+    color: '#333',
+  },
+
+  // Shopping List Header
+  shoppingListContainer: {
+    width: "100%",
+    height: '90%',
+    backgroundColor: "#ECECEC",
+    padding: 15,
+    borderRadius: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    marginVertical: 10,
+  },
+  shoppingListHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15, // Space between header and list
+  },
+  shoppingListTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: "Avenir",
+    color: "#333",
+  },
+  headerButtonsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4, // Space between buttons
+  },
+  headerButton: {
     alignSelf: 'center',
     backgroundColor: '#008F7A',
     padding: 10,
@@ -1246,28 +1289,59 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     marginRight: 5,
   },
-  splitButtonText: {
-    fontFamily: 'Avenir',
-    color: '#fff',
-  },
-  filterButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  addButton: {
-    alignSelf: 'center',
-    backgroundColor: '#008F7A',
-    padding: 10,
-    borderRadius: 4,
-    marginBottom: 0,
-    marginRight: 5,
-  },
-  addButtonText: {
-    fontFamily: 'Avenir',
+  headerButtonText: {
+    fontFamily: "Avenir",
     color: '#fff',
     padding: 0,
     borderRadius: 8,
+  },
+  filterButton: {
+    backgroundColor: "#6C757D",
+    padding: 10,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Shopping List Items
+  listItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    backgroundColor: '#f9f9f9',
+    marginBottom: 5,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  rowContainer: {
+    flexDirection: 'column',
+    flex: 1,
+    marginRight: 10,
+  },
+  itemName: {
+    fontFamily: "Avenir",
+    fontWeight: 'bold',
+  },
+  purchasedText: {
+    fontFamily: "Avenir",
+    color: 'gray',
+    textDecorationLine: 'line-through',
+  },
+  addedByText: {
+    fontFamily: "Avenir",
+    color: 'gray',
+  },
+  radioButton: {
+    padding: 5,
+  },
+  pinButton: {
+    padding: 5,
+    marginLeft: 10,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
   },
   editButton: {
     padding: 10,
@@ -1301,15 +1375,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  filterButton: {
-    backgroundColor: '#6C757D',
-    padding: 10,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
-  // Input Fields
+  // Modals
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: "Avenir",
+    marginBottom: 10,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -1320,60 +1404,26 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     fontFamily: 'Avenir',
   },
-
-  // Shopping List Container
-  shoppingListContainer: {
-    width: '100%',
-    height: '90%',
-    backgroundColor: '#ECECEC',
-    padding: 15,
+  modalButtonsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 2,
+  },
+  modalButtonWrapper: { // Households exist
+    backgroundColor: "#008F7A",
+    flexDirection:'row',
+    padding: 11,
     borderRadius: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    marginVertical: 10,
   },
-  subtitleContainer: {
-    marginBottom: 20,
-    alignItems: 'flex-start',
-  },
-  shoppingListHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15, // Space between header and list
-  },
-  pinButton: {
-    padding: 5,
-    marginLeft: 10,
-  },
-  shoppingListTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'Avenir',
-    color: '#333',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4, // Space between buttons
-  },
-  listItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    backgroundColor: '#f9f9f9',
-    marginBottom: 5,
+  modalButtonWrapper2: {
+    backgroundColor: "#DF0808",
+    flexDirection:'row',
+    padding: 11,
     borderRadius: 8,
-    flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
-  },
-  textContainer: {
-    flexDirection: 'column',
-    flex: 1,
-    marginRight: 10,
+    justifyContent: 'center'
   },
   itemName: {
     fontFamily: 'Avenir',
@@ -1400,13 +1450,25 @@ const styles = StyleSheet.create({
   radioButton: {
     padding: 5,
   },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  closeButton1: {
+    color: 'red', 
+    fontFamily: 'Avenir',
+    fontWeight: 'bold',
+    fontSize: 16,
+    paddingBottom: 12
+  },
+  closeButton2: {
+    color: 'red', 
+    fontFamily: 'Avenir',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 
   // Modal Styles
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
   editModalContent: {
     backgroundColor: '#fff',
     padding: 20,
@@ -1467,70 +1529,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4, // shadow for IOS
     elevation: 5, // shadow for android
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    fontFamily: 'Avenir',
-    marginBottom: 10,
-  },
-  modalButtonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 2,
-  },
-  actionButtonWrapper: {
-    backgroundColor: '#008F7A',
-    flexDirection: 'row',
-    padding: 11,
-    borderRadius: 8,
-  },
-  actionButtonWrapper2: {
-    backgroundColor: '#DF0808',
-    flexDirection: 'row',
-    padding: 11,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  cancelButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-
-  // Dropdown
-  dropdown: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 8,
-  },
-  dropdownPlaceholder: {
-    fontFamily: 'Avenir',
-    fontSize: 18,
-    color: '#aaa',
-  },
-  dropdownText: {
-    fontFamily: 'Avenir',
-    fontSize: 18,
-    color: '#333',
-  },
-  dropdownContainer: {
-    borderColor: '#ddd',
-    borderRadius: 8,
-  },
 
   // Picker
   picker: {
@@ -1539,26 +1537,30 @@ const styles = StyleSheet.create({
   },
 
   // Split the Bill
-  memberText: {
-    fontSize: 16, // Adjust font size
-    fontFamily: 'Avenir', // Adjust font family
-    fontWeight: '500', // Adjust font weight
-    color: '#000', // Default color for unselected
+  listText: {
+    fontSize: 16,
+    fontFamily: 'Avenir',
+    fontWeight: '500',
+    color: '#000',
   },
-  memberTextSelected: {
+  listTextSelected: {
     color: '#fff', // Color for selected members
   },
-  nextButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 10,
+  nameText: {
+    fontSize: 16,
+    fontFamily: 'Avenir',
+    fontWeight: '500',
+    color: '#000',
+    flex: 1,
   },
-
+  nextButtonContainer: {
+    alignItems: 'center',
+  },
   nextButtonText: {
     fontFamily: 'Avenir', // Font family
     fontSize: 16, // Font size
     fontWeight: 'bold', // Font weight
-    color: '#007BFF', // Text color
+    color: '#008F7A', // Text color
   },
 
   // Splitted Items Toggle
