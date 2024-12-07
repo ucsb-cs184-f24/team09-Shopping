@@ -1,47 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  FlatList,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
+  Modal,
+  Animated,
+  LayoutAnimation,
+  UIManager,
+  Platform,
+} from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, where} from 'firebase/firestore'; 
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+} from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { updateBalancesAfterSplit } from './BalancesScreen'; 
+import { updateBalancesAfterSplit } from './BalancesScreen';
 
-// TODO (COMPLETE): remove items from list of respective household when user leaves group
-// TODO (COMPLETE): do not allow split bill on checked off items
-// TODO (COMPLETE): Only allow split bill if household has more than 1 user, implement cleaner UI i.e. button padding
+// Enable LayoutAnimation on Android
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function HomeScreen() {
   // Household states
   const [households, setHouseholds] = useState([]); // Array of household objects that user is part of
-  const [selectedHouseholdID, setSelectedHouseholdID] = useState('');  // String of ID of selected household
-  const [selectedHouseholdName, setSelectedHouseholdName] = useState(''); // Sting of name of selected household
+  const [selectedHouseholdID, setSelectedHouseholdID] = useState(''); // String of ID of selected household
+  const [selectedHouseholdName, setSelectedHouseholdName] = useState(''); // String of name of selected household
   const [householdMembers, setHouseholdMembers] = useState([]); // Array of objects of users within a household
 
   // Shopping list states
-  const [shoppingListMeta, setShoppingListMeta] = useState(null); // Object of default shopping list metadeta, and ID
-  const [shoppingListItems, setShoppingListItems] = useState([]);  // Array of objects of items in shopping list
-  const [categories, setCategories] = useState([]);  // Array of strings of categories
-  const [filteredShoppingListItems, setFilteredShoppingListItems] = useState([]);  // Array of objects of filtered items in shopping list
+  const [shoppingListMeta, setShoppingListMeta] = useState(null); // Object of default shopping list metadata, and ID
+  const [shoppingListItems, setShoppingListItems] = useState([]); // Array of objects of items in shopping list
+  const [categories, setCategories] = useState([]); // Array of strings of categories
+  const [filteredShoppingListItems, setFilteredShoppingListItems] = useState([]); // Array of objects of filtered items in shopping list
 
   // New item states
-  const [newItemName, setNewItemName] = useState('');  // String of new item name
+  const [newItemName, setNewItemName] = useState(''); // String of new item name
   const [newItemCategory, setNewItemCategory] = useState(''); // String of new item category
   const [newItemCost, setNewItemCost] = useState(''); // String of new item cost
   const [totalCost, setTotalCost] = useState(0);
-  const [pinnedItems, setPinnedItems] = useState([]);  // Array of pinned items
+  const [pinnedItems, setPinnedItems] = useState([]); // Array of pinned items
 
   // Edit item states
   const [currentEditItem, setCurrentEditItem] = useState(null); // Object of item currently editing
-  const [editItemName, setEditItemName] = useState('');  // String of new item name
+  const [editItemName, setEditItemName] = useState(''); // String of new item name
   const [editItemCategory, setEditItemCategory] = useState(''); // String of edit item category
   const [editItemCost, setEditItemCost] = useState(''); // String of edit item cost
-  const [selectedCategory, setSelectedCategory] = useState('');  // String of selected category
+  const [selectedCategory, setSelectedCategory] = useState(''); // String of selected category
 
   // Modal states
   const [filterModalVisible, setFilterModalVisible] = useState(false); // Bool of modal visibility
   const [editModalVisible, setEditModalVisible] = useState(false); // Bool of modal visibility
+  const [splitMembersModalVisible, setSplitMembersModalVisible] = useState(false); // Bool of modal visibility
+  const [splitItemsModalVisible, setSplitItemsModalVisible] = useState(false); // Bool of modal visibility
+  const [showCustomAmountModal, setShowCustomAmountModal] = useState(false);
   const [costModalVisible, setCostModalVisible] = useState(false); // Bool of modal visibility
   const [addItemModalVisible, setAddItemModalVisible] = useState(false);
   const [splitModalVisible, setsplitModalVisible] = useState(false);
@@ -51,21 +82,28 @@ export default function HomeScreen() {
 
   // Split bill states
   const [selectedMembers, setSelectedMembers] = useState([]); // Array of strings of household members IDs
-  const [selectedItems, setSelectedItems] = useState([]); // Array of strings of items IDs
+  const [selectedItems, setSelectedItems] = useState([]); // Array of objects of selected items
   const [currentItemForCost, setCurrentItemForCost] = useState(null);
   const [inputCost, setInputCost] = useState('');
   const [customAmounts, setCustomAmounts] = useState({});
   const [splitStep, setSplitStep] = useState('members')
 
+  // State to track split items visibility
+  const [showSplittedItems, setShowSplittedItems] = useState(false);
+  const [animation] = useState(new Animated.Value(0));
+
   // Fetch the households associated with the user and automatically assign first one
   useEffect(() => {
     const userId = auth.currentUser.uid;
-    const q = query(collection(db, 'households'), where('members', 'array-contains', userId));
+    const q = query(
+      collection(db, 'households'),
+      where('members', 'array-contains', userId)
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const userHouseholds = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setHouseholds(userHouseholds);
 
@@ -74,8 +112,7 @@ export default function HomeScreen() {
         const defaultHousehold = userHouseholds[0];
         setSelectedHouseholdID(defaultHousehold.id);
         setSelectedHouseholdName(defaultHousehold.displayHouseholdName);
-      }
-      else {
+      } else {
         // If there are no households, clear the selected household
         setSelectedHouseholdID('');
         setSelectedHouseholdName('');
@@ -106,28 +143,31 @@ export default function HomeScreen() {
 
   // Listen for changes in items of shopping list
   useEffect(() => {
-    if (!selectedHouseholdID | !shoppingListMeta) {
+    if (!selectedHouseholdID || !shoppingListMeta) {
       setShoppingListItems([]);
       setCategories([]);
       return;
     }
-  
-    const q = collection(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`);
+
+    const q = collection(
+      db,
+      `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
       setShoppingListItems(items);
-  
+
       // Extract unique categories from items
       const uniqueCategories = Array.from(new Set(items.map((item) => item.category)));
       setCategories(uniqueCategories);
     });
-  
+
     return () => unsubscribe();
   }, [selectedHouseholdID, shoppingListMeta]);
-  
+
   // Filter the shopping list based on the selected category
   const filterListByCategory = (category) => {
     setSelectedCategory(category);
@@ -137,26 +177,29 @@ export default function HomeScreen() {
   // Fetch filtered list to display. If no filter, fetch entire list.
   useEffect(() => {
     if (selectedCategory) {
-      const filteredList = shoppingListItems.filter(item => item.category === selectedCategory);
+      const filteredList = shoppingListItems.filter(
+        (item) => item.category === selectedCategory && !item.isSplit
+      );
       setFilteredShoppingListItems(filteredList);
-    }
-    else {
-      setFilteredShoppingListItems(shoppingListItems);
+    } else {
+      setFilteredShoppingListItems(
+        shoppingListItems.filter((item) => !item.isSplit)
+      );
     }
   }, [selectedCategory, shoppingListItems]);
-  
+
   // Fetch members if selected household changes
   useEffect(() => {
     if (!selectedHouseholdID) {
       setHouseholdMembers([]);
       return;
     }
-  
+
     const householdDocRef = doc(db, 'households', selectedHouseholdID);
-  
+
     const unsubscribe = onSnapshot(householdDocRef, async (snapshot) => {
       const members = snapshot.data().members;
-  
+
       const membersInfo = await Promise.all(
         members.map(async (uid) => {
           try {
@@ -173,23 +216,31 @@ export default function HomeScreen() {
           return null;
         })
       );
-  
+
       // Update the state with filtered members info
-      setHouseholdMembers(membersInfo.filter(info => info !== null));
+      setHouseholdMembers(membersInfo.filter((info) => info !== null));
     });
-  
+
     // Cleanup listener when the component unmounts or household changes
     return () => unsubscribe();
-  }, [selectedHouseholdID]);  
+  }, [selectedHouseholdID]);
 
-
+  // Toggle pin status of an item
   const togglePinItem = async (itemId, isPinned) => {
     try {
-      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+      const itemRef = doc(
+        db,
+        'households',
+        selectedHouseholdID,
+        'shoppingLists',
+        shoppingListMeta.id,
+        'items',
+        itemId
+      );
       await updateDoc(itemRef, {
         pinned: !isPinned,
       });
-  
+
       // Update the local state to reflect the change
       setShoppingListItems((prevItems) => {
         return prevItems.map((item) => {
@@ -205,11 +256,13 @@ export default function HomeScreen() {
     }
   };
 
-
   // Add a new item to Firestore
   const addItemToList = async () => {
     if (!selectedHouseholdID) {
-      Alert.alert('Error', 'Please select a household with an active shopping list before adding items.');
+      Alert.alert(
+        'Error',
+        'Please select a household with an active shopping list before adding items.'
+      );
       return;
     }
 
@@ -224,16 +277,21 @@ export default function HomeScreen() {
       cost: newItemCost ? parseFloat(newItemCost) : 0,
       addedBy: auth.currentUser.email,
       isPurchased: false,
+      isSplit: false, // Initialize as not split
       addedDate: new Date(),
     };
 
     try {
-      const itemsRef = collection(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`);
+      const itemsRef = collection(
+        db,
+        `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items`
+      );
       await addDoc(itemsRef, newItemObj);
 
       setNewItemName('');
       setNewItemCategory('');
       setNewItemCost('');
+      setAddItemModalVisible(false);
     } catch (error) {
       Alert.alert('Error', 'Failed to add item. Please try again.');
       console.error(error);
@@ -244,16 +302,42 @@ export default function HomeScreen() {
   const deleteItem = async (itemId) => {
     try {
       // Reference to the specific item in the items subcollection
-      const itemRef = doc(db, `households/${selectedHouseholdID}/shoppingLists/${shoppingListMeta.id}/items/${itemId}`);
+      const itemRef = doc(
+        db,
+        `households`,
+        selectedHouseholdID,
+        `shoppingLists`,
+        shoppingListMeta.id,
+        `items`,
+        itemId
+      );
 
       // Delete the item document
       await deleteDoc(itemRef);
-      
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item. Please try again.');
       console.error(error);
     }
-  };  
+  };
+
+  // Mark an item as split instead of deleting
+  const markItemAsSplit = async (itemId) => {
+    try {
+      const itemRef = doc(
+        db,
+        'households',
+        selectedHouseholdID,
+        'shoppingLists',
+        shoppingListMeta.id,
+        'items',
+        itemId
+      );
+      await updateDoc(itemRef, { isSplit: true });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to mark item as split. Please try again.');
+      console.error(error);
+    }
+  };
 
   // Open edit modal
   const openEditModal = (item) => {
@@ -274,8 +358,20 @@ export default function HomeScreen() {
       return;
     }
     try {
-      const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentEditItem.id);
-      await updateDoc(itemRef, { itemName: editItemName, category: editItemCategory, cost });
+      const itemRef = doc(
+        db,
+        'households',
+        selectedHouseholdID,
+        'shoppingLists',
+        shoppingListMeta.id,
+        'items',
+        currentEditItem.id
+      );
+      await updateDoc(itemRef, {
+        itemName: editItemName,
+        category: editItemCategory,
+        cost,
+      });
 
       setEditItemName('');
       setEditItemCategory('');
@@ -288,75 +384,79 @@ export default function HomeScreen() {
     }
   };
 
+  // Split bill functionality
   const splitBill = async () => {
     if (selectedMembers.length === 0) {
       Alert.alert('Error', 'Please select at least one member to split the bill.');
       return;
     }
-  
+
     if (selectedItems.length === 0) {
       Alert.alert('Error', 'Please select at least one item to split.');
       return;
     }
-  
+
     console.log('Selected Items for Splitting:', selectedItems);
-  
-    
-    // Use full item objects to calculate total cost
+
+    // Calculate total cost of selected items
     let calculatedCost = 0;
 
-  // Use full item objects to calculate total cost
-  selectedItems.forEach((item) => {
-    const itemCost = item.cost !== undefined ? parseFloat(item.cost) : 0;
-    console.log(`Item: ${item.itemName || item.id}, Cost: ${itemCost}`);
-    calculatedCost += itemCost;
-  });
+    selectedItems.forEach((item) => {
+      const itemCost = item.cost !== undefined ? parseFloat(item.cost) : 0;
+      console.log(`Item: ${item.itemName || item.id}, Cost: ${itemCost}`);
+      calculatedCost += itemCost;
+    });
 
-  setTotalCost(calculatedCost);
+    setTotalCost(calculatedCost);
 
-  console.log('Total Cost:', calculatedCost);
-  const splitAmount = parseFloat((calculatedCost / (selectedMembers.length + 1)).toFixed(2));
-  console.log('Split Amount:', splitAmount);
-  
+    console.log('Total Cost:', calculatedCost);
+    const splitAmount = parseFloat((calculatedCost / (selectedMembers.length + 1)).toFixed(2));
+    console.log('Split Amount:', splitAmount);
+
     // Initialize customAmounts with default splitAmount
-    const currentUser = getCurrentUser(); // Replace with your method to get the current user
+    const currentUser = auth.currentUser.uid; // Get current user UID
     const allMembers = [...selectedMembers, currentUser];
-  
+
     const initialCustomAmounts = {};
     allMembers.forEach((member) => {
-      initialCustomAmounts[member.id] = splitAmount;
+      initialCustomAmounts[member] = splitAmount;
     });
-  
+
     setCustomAmounts(initialCustomAmounts);
-  
+
     // Show modal to assign custom amounts
     setShowCustomAmountModal(true);
   };
-  
+
   // Function to proceed with splitting the bill after custom amounts are set
   const proceedWithSplitBill = async () => {
     try {
       console.log("Function updated");
       await updateBalancesAfterSplit(selectedHouseholdID, customAmounts, selectedItems, totalCost);
 
-      console.log("Function updated");
-      // Remove split items from the list after they are split
+      // Mark split items as split instead of deleting
       for (const item of selectedItems) {
-        await deleteItem(item.id);
-        console.log("Deleting item");
+        await markItemAsSplit(item.id);
+        console.log('Marking item as split:', item.id);
       }
-  
+
       // Clear selected items and members after split to prevent them from being reused
       setSelectedItems([]);
-      console.log("Clear selected items");
       setSelectedMembers([]);
       setCustomAmounts({});
+      setShowCustomAmountModal(false);
+
+      // Optionally, collapse the split items section if it's open
+      if (showSplittedItems) {
+        toggleSplittedItems();
+      }
     } catch (error) {
       console.error('Error updating balances:', error);
       Alert.alert('Error', 'Failed to record the split.');
     }
   };
-  
+
+  // Toggle selection of an item for splitting
   const toggleItemSelection = (item) => {
     setSelectedItems((prevSelected) => {
       const isSelected = prevSelected.find((selectedItem) => selectedItem.id === item.id);
@@ -377,11 +477,19 @@ export default function HomeScreen() {
       setCostModalVisible(true);
     } else {
       try {
-        const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+        const itemRef = doc(
+          db,
+          'households',
+          selectedHouseholdID,
+          'shoppingLists',
+          shoppingListMeta.id,
+          'items',
+          itemId
+        );
         await updateDoc(itemRef, {
           isPurchased: !currentStatus,
           purchasedDate: !currentStatus ? new Date() : null, // Add or clear purchasedDate
-        });  
+        });
       } catch (error) {
         Alert.alert('Error', 'Failed to update item status. Please try again.');
         console.error(error);
@@ -389,20 +497,28 @@ export default function HomeScreen() {
     }
   };
 
-  const selectHousehold = (householdId) => {    
+  // Function to select a household and set its name
+  const selectHousehold = (householdId) => {
     // Find the name of the selected household
-    const household = households.find(h => h.id === householdId);
+    const household = households.find((h) => h.id === householdId);
     if (household) {
       setSelectedHouseholdName(household.displayHouseholdName);
     }
   };
 
+  // Toggle visibility of splitted items with animation
+  const toggleSplittedItems = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowSplittedItems(!showSplittedItems);
+  };
+
   return (
-    <View style={styles.container}>      
+    <View style={styles.container}>
+      {/* Household Dropdown Picker */}
       <DropDownPicker
         open={selectHouseHoldDropdown}
         value={selectedHouseholdID}
-        items={households.map(household => ({
+        items={households.map((household) => ({
           label: household.displayHouseholdName,
           value: household.id,
         }))}
@@ -420,7 +536,9 @@ export default function HomeScreen() {
         placeholderStyle={styles.dropdownPlaceholder}
       />
 
+      {/* Shopping List Container */}
       <View style={styles.shoppingListContainer}>
+        {/* Shopping List Header */}
         <View style={styles.shoppingListHeader}>
           <Text style={styles.shoppingListTitle}>Shopping List</Text>
           <View style={styles.headerButtonsContainer}>
@@ -431,6 +549,7 @@ export default function HomeScreen() {
               <Text style={styles.headerButtonText}>+ Add Item</Text>
             </TouchableOpacity>
 
+            {/* Split Bill Button */}
             <TouchableOpacity
               style={styles.headerButton}
               onPress={() => {
@@ -439,7 +558,10 @@ export default function HomeScreen() {
                 } else if (shoppingListItems.length === 0) {
                   Alert.alert('Error', 'There are no items in the list for this household.');
                 } else if (householdMembers.length <= 1) {
-                  Alert.alert('Error', 'You need at least one other member in the household to split the bill.');
+                  Alert.alert(
+                    'Error',
+                    'You need at least one other member in the household to split the bill.'
+                  );
                 } else {
                   setsplitModalVisible(true);
                 }
@@ -448,12 +570,17 @@ export default function HomeScreen() {
               <Text style={styles.headerButtonText}>Split</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+            {/* Filter Button */}
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setFilterModalVisible(true)}
+            >
               <Ionicons name="options-outline" size={18} color="white" />
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Active Shopping List Items */}
         <FlatList
           data={filteredShoppingListItems.sort((a, b) => {
             if (a.pinned === b.pinned) {
@@ -487,31 +614,41 @@ export default function HomeScreen() {
                   <Text style={[styles.itemName, item.isPurchased && styles.purchasedText]}>
                     {item.itemName} - ${item.cost}
                   </Text>
-                  <Text style={[styles.addedByText, item.isPurchased && styles.purchasedText]}>
+                  <Text
+                    style={[
+                      styles.addedByText,
+                      item.isPurchased && styles.purchasedText,
+                    ]}
+                  >
                     added by {item.addedBy}
                   </Text>
-                  <Text style={[item.isPurchased && styles.purchasedText]}>
+                  <Text style={item.isPurchased && styles.purchasedText}>
                     Category: {item.category}
                   </Text>
                 </View>
+                {/* Pin Button */}
                 <TouchableOpacity
                   style={styles.pinButton}
                   onPress={() => togglePinItem(item.id, item.pinned)}
                 >
                   <Ionicons
                     name={item.pinned ? 'bookmark' : 'bookmark-outline'}
-                    size={34}
+                    size={24}
                     color={item.pinned ? '#FFD700' : 'gray'}
                   />
                 </TouchableOpacity>
-                
-                {/* Radio button to indicate that item has been purchased */}
-                <TouchableOpacity 
+
+                {/* Radio Button for Purchased Status */}
+                <TouchableOpacity
                   style={styles.radioButton}
                   onPress={() => togglePurchased(item.id, item.isPurchased, item)}
                 >
                   <Ionicons
-                    name={item.isPurchased ? 'checkbox-outline' : 'square-outline'}
+                    name={
+                      item.isPurchased
+                        ? 'checkbox-outline'
+                        : 'square-outline'
+                    }
                     size={24}
                     color={item.isPurchased ? 'orange' : 'gray'}
                   />
@@ -520,6 +657,106 @@ export default function HomeScreen() {
             </Swipeable>
           )}
         />
+
+        {/* Splitted Items Toggle */}
+        <TouchableOpacity
+          style={styles.splittedItemsToggle}
+          onPress={toggleSplittedItems}
+        >
+          <Text style={styles.splittedItemsText}>
+            {showSplittedItems
+              ? 'Hide Splitted Items'
+              : `Show Splitted Items (${shoppingListItems.filter(item => item.isSplit).length})`}
+          </Text>
+          <Ionicons
+            name={showSplittedItems ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color="#FFF"
+          />
+        </TouchableOpacity>
+
+        {/* Splitted Items List */}
+        {showSplittedItems && (
+          <FlatList
+            data={shoppingListItems
+              .filter((item) => item.isSplit)
+              .sort((a, b) => (a.addedDate < b.addedDate ? 1 : -1))}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <Swipeable
+                renderRightActions={() => (
+                  <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => openEditModal(item)}
+                    >
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => deleteItem(item.id)}
+                    >
+                      <Text style={styles.actionText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              >
+                <View style={styles.listItem}>
+                  <View style={styles.rowContainer}>
+                    <Text
+                      style={[
+                        styles.itemName,
+                        item.isPurchased && styles.purchasedText,
+                        styles.splitItemText, // Additional style for split items
+                      ]}
+                    >
+                      {item.itemName} - ${item.cost}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.addedByText,
+                        item.isPurchased && styles.purchasedText,
+                      ]}
+                    >
+                      added by {item.addedBy}
+                    </Text>
+                    <Text style={item.isPurchased && styles.purchasedText}>
+                      Category: {item.category}
+                    </Text>
+                  </View>
+                  {/* Pin Button */}
+                  <TouchableOpacity
+                    style={styles.pinButton}
+                    onPress={() => togglePinItem(item.id, item.pinned)}
+                  >
+                    <Ionicons
+                      name={item.pinned ? 'bookmark' : 'bookmark-outline'}
+                      size={24}
+                      color={item.pinned ? '#FFD700' : 'gray'}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Radio Button for Purchased Status */}
+                  <TouchableOpacity
+                    style={styles.radioButton}
+                    onPress={() => togglePurchased(item.id, item.isPurchased, item)}
+                  >
+                    <Ionicons
+                      name={
+                        item.isPurchased
+                          ? 'checkbox-outline'
+                          : 'square-outline'
+                      }
+                      size={24}
+                      color={item.isPurchased ? 'orange' : 'gray'}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </Swipeable>
+            )}
+          />
+        )}
       </View>
 
       {/* Add Item Modal */}
@@ -532,7 +769,7 @@ export default function HomeScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.addItemModalContent}>
             <Text style={styles.modalTitle}>Add A New Item</Text>
-            
+
             <TextInput
               style={styles.input}
               placeholder="Enter item name"
@@ -561,7 +798,6 @@ export default function HomeScreen() {
                 style={styles.modalButtonWrapper}
                 onPress={() => {
                   addItemToList();
-                  setAddItemModalVisible(false);
                 }}
               >
                 <Text style={styles.modalButtonText}>Save</Text>
@@ -668,45 +904,41 @@ export default function HomeScreen() {
                     setSelectedItems([]);
                     setSelectedMembers([]);
                     setCustomAmounts({});
-                    setsplitModalVisible(false)}
-                  }
+                    setsplitModalVisible(false);
+                  }}
                 >
-                  <Text style={styles.closeButton1}>
-                    Close
-                  </Text>
+                  <Text style={styles.closeButton1}>Close</Text>
                 </TouchableOpacity>
               </View>
-    
+
               <FlatList
-                data={shoppingListItems.filter((item) => item.isPurchased)}
+                data={shoppingListItems.filter((item) => item.isPurchased && !item.isSplit)}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={{
-                      padding: 10,
-                      backgroundColor: selectedItems.includes(item.id) ? '#008F7A' : '#fff',
-                      borderRadius: 4,
-                      marginBottom: 5,
-                    }}
-                    onPress={() => {
-                      setSelectedItems((prevSelected) =>
-                        prevSelected.includes(item.id)
-                          ? prevSelected.filter((i) => i !== item.id)
-                          : [...prevSelected, item.id]
-                      ), toggleItemSelection(item);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.listText,
-                        selectedItems.includes(item.id) && styles.listTextSelected,
-                      ]}
+                renderItem={({ item }) => {
+                  const isSelected = selectedItems.some((selectedItem) => selectedItem.id === item.id);
+                  return (
+                    <TouchableOpacity
+                      style={{
+                        padding: 10,
+                        backgroundColor: isSelected ? '#008F7A' : '#fff',
+                        borderRadius: 4,
+                        marginBottom: 5,
+                      }}
+                      onPress={() => toggleItemSelection(item)}
                     >
-                      {item.itemName} - ${item.cost}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                      <Text
+                        style={[
+                          styles.listText,
+                          isSelected && styles.listTextSelected,
+                        ]}
+                      >
+                        {item.itemName} - ${item.cost}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
               />
+
               <View style={styles.nextButtonContainer}>
                 <TouchableOpacity
                   onPress={() => {
@@ -823,9 +1055,11 @@ export default function HomeScreen() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.editModalContent}>
-          <Text style={styles.modalTitle}>
-            {currentEditItem ? `Editing: ${currentEditItem.itemName}` : "Editing..."}
-          </Text>
+            <Text style={styles.modalTitle}>
+              {currentEditItem
+                ? `Editing: ${currentEditItem.itemName}`
+                : 'Editing...'}
+            </Text>
 
             <TextInput
               style={styles.input}
@@ -834,7 +1068,7 @@ export default function HomeScreen() {
               value={editItemName}
               onChangeText={setEditItemName}
             />
-  
+
             <TextInput
               style={styles.input}
               placeholder="Edit category"
@@ -842,20 +1076,21 @@ export default function HomeScreen() {
               value={editItemCategory}
               onChangeText={setEditItemCategory}
             />
-  
+
             <TextInput
               style={styles.input}
               placeholder="Edit cost"
               placeholderTextColor="#aaa"
               value={editItemCost}
               onChangeText={setEditItemCost}
+              keyboardType="numeric"
             />
             
             <View style={styles.modalButtonsContainer}>
               <TouchableOpacity
                 style={styles.modalButtonWrapper}
                 onPress={() => {
-                  saveEdit()
+                  saveEdit();
                 }}
               >
                 <Text style={styles.modalButtonText}>Save</Text>
@@ -863,7 +1098,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={styles.modalButtonWrapper2}
                 onPress={() => {
-                  setEditModalVisible(false)
+                  setEditModalVisible(false);
                 }}
               >
                 <Text style={styles.modalButtonText}>Cancel</Text>
@@ -872,7 +1107,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-  
+
       {/* Modal for filter selection */}
       <Modal
         visible={filterModalVisible}
@@ -893,7 +1128,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-  
+
             <Picker
               selectedValue={selectedCategory}
               onValueChange={(itemValue) => filterListByCategory(itemValue)}
@@ -901,14 +1136,19 @@ export default function HomeScreen() {
             >
               <Picker.Item label="No Filter" value="" color="#000" />
               {categories.map((category, index) => (
-                <Picker.Item key={index} label={category} value={category} color="#000" />
+                <Picker.Item
+                  key={index}
+                  label={category}
+                  value={category}
+                  color="#000"
+                />
               ))}
             </Picker>
           </View>
         </View>
       </Modal>
 
-      {/* Modal for cost */}
+      {/* Modal for cost input */}
       <Modal
         visible={costModalVisible}
         animationType="slide"
@@ -918,7 +1158,7 @@ export default function HomeScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.costModalContent}>
             <Text style={styles.modalTitle}>Enter Item Cost</Text>
-            
+
             <TextInput
               style={styles.input}
               placeholder="Enter item cost"
@@ -932,12 +1172,27 @@ export default function HomeScreen() {
                 style={styles.modalButtonWrapper}
                 onPress={async () => {
                   try {
-                    const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", currentItemForCost.id);
-                    await updateDoc(itemRef, { isPurchased: true, cost: parseFloat(inputCost) });
+                    const itemRef = doc(
+                      db,
+                      'households',
+                      selectedHouseholdID,
+                      'shoppingLists',
+                      shoppingListMeta.id,
+                      'items',
+                      currentItemForCost.id
+                    );
+                    await updateDoc(itemRef, {
+                      isPurchased: true,
+                      cost: parseFloat(inputCost),
+                      purchasedDate: new Date(),
+                    });
                     setCostModalVisible(false);
                     setInputCost('');
                   } catch (error) {
-                    Alert.alert('Error', 'Failed to update item cost. Please try again.');
+                    Alert.alert(
+                      'Error',
+                      'Failed to update item cost. Please try again.'
+                    );
                     console.error(error);
                   }
                 }}
@@ -959,9 +1214,9 @@ export default function HomeScreen() {
       </Modal>
     </View>
   );
-  
 }
 
+// Stylesheet
 const styles = StyleSheet.create({
   // Main Container
   container: {
@@ -1032,6 +1287,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 4,
     marginBottom: 0,
+    marginRight: 5,
   },
   headerButtonText: {
     fontFamily: "Avenir",
@@ -1092,7 +1348,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
     marginBottom: 5,
-    borderRadius: 4,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFD700',
@@ -1106,7 +1362,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
     marginBottom: 5,
-    borderRadius: 4,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FF6347',
@@ -1146,7 +1402,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     width: '90%',
     alignSelf: 'center',
-    fontFamily: "Avenir",
+    fontFamily: 'Avenir',
   },
   modalButtonsContainer: {
     flexDirection: 'row',
@@ -1168,6 +1424,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  itemName: {
+    fontFamily: 'Avenir',
+    fontWeight: 'bold',
+  },
+  addedByText: {
+    fontFamily: 'Avenir',
+    color: 'gray',
+  },
+  purchasedText: {
+    fontFamily: 'Avenir',
+    color: 'gray',
+    textDecorationLine: 'line-through',
+  },
+  splitText: {
+    fontFamily: 'Avenir',
+    color: '#FF8C00', // Orange color for split items
+    fontStyle: 'italic',
+  },
+  splitItemText: {
+    fontStyle: 'italic',
+    color: '#FF8C00',
+  },
+  radioButton: {
+    padding: 5,
   },
   modalButtonText: {
     color: '#fff',
@@ -1276,9 +1557,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nextButtonText: {
+    fontFamily: 'Avenir', // Font family
+    fontSize: 16, // Font size
+    fontWeight: 'bold', // Font weight
+    color: '#008F7A', // Text color
+  },
+
+  // Splitted Items Toggle
+  splittedItemsToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#008F7A',
+    borderRadius: 8,
+  },
+  splittedItemsText: {
+    color: '#fff',
     fontFamily: 'Avenir',
-    fontSize: 16,
     fontWeight: 'bold',
-    color: '#008F7A',
   },
 });
