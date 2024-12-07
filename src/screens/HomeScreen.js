@@ -475,7 +475,19 @@ export default function HomeScreen() {
     if (!currentStatus) {
       setCurrentItemForCost(item);
       setCostModalVisible(true);
-    } else {
+      try {
+        const itemRef = doc(db, "households", selectedHouseholdID, "shoppingLists", shoppingListMeta.id, "items", itemId);
+        await updateDoc(itemRef, {
+          isPurchased: true,
+          purchasedDate: new Date(), // Add or clear purchasedDate
+        });  
+      } 
+      catch (error) {
+        Alert.alert('Error', 'Failed to update purchasedDate of newly purchased Item.');
+        console.error(error);
+      }
+    } 
+    else {
       try {
         const itemRef = doc(
           db,

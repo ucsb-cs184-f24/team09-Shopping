@@ -24,7 +24,7 @@ export default function SummaryPage() {
     '#91d1c8', // light blue
     '#098372',
     '#9b91d1', // light purple
-    '#91d197', // light green
+    '#9eea7d', // light green
     '#d59df9', //
     '#577d5b', // dark green
     '#418279', // dark teal
