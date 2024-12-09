@@ -50,7 +50,7 @@ link](https://github.com/ucsb-cs184-f24/team09-Shopping/tree/main/team)
 ### UI
 - **Simplicity**: The UI is designed to make navigation intuitive, with clear buttons and minimal forms.
 
-
+<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Households.PNG" alt="Alt text" width="400">
 
 ## 4. Design and Process Documentation Overlap
 
