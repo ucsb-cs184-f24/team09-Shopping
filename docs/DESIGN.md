@@ -50,11 +50,11 @@ link](https://github.com/ucsb-cs184-f24/team09-Shopping/tree/main/team)
 ### UI
 - **Simplicity**: The UI is designed to make navigation intuitive, with clear buttons and minimal forms.
 
-<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Households.PNG" alt="Alt text" width="400">
-<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Shopping%20Lists.PNG" alt="Alt text" width="400">
-<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Balances.PNG" alt="Alt text" width="400">
-<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Summary.PNG" alt="Alt text" width="400">
-<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Profile.PNG" alt="Alt text" width="400">
+<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Households.PNG" alt="Alt text" width="400" style="display:inline-block;">
+<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Shopping%20Lists.PNG" alt="Alt text" width="400" style="display:inline-block;">
+<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Balances.PNG" alt="Alt text" width="400" style="display:inline-block;">
+<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Summary.PNG" alt="Alt text" width="400" style="display:inline-block;">
+<img src="https://github.com/ucsb-cs184-f24/team09-Shopping/blob/main/assets/Profile.PNG" alt="Alt text" width="400" style="display:inline-block;">
 
 ## 4. Design and Process Documentation Overlap
 
