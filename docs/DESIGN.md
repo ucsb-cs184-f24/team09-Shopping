@@ -55,10 +55,13 @@ link](https://github.com/ucsb-cs184-f24/team09-Shopping/tree/main/team)
 ### UI
 - **Simplicity**: The UI is designed to make navigation intuitive, with clear buttons and minimal forms.
 
-<img width="570" alt="Screenshot 2024-11-17 at 8 21 25 PM" src="https://github.com/user-attachments/assets/f109c0ca-be33-4073-bfea-512d8fb9c86a">
+![IMG_4460](https://github.com/user-attachments/assets/3676b88f-1d72-4a63-9c90-3c13610627cc)
+![IMG_4459](https://github.com/user-attachments/assets/1d1f51e5-1fe6-4078-acb9-3d5e7d92484d)
+![IMG_4461](https://github.com/user-attachments/assets/0b702f1d-d130-411d-983b-5bd73b0b53ee)
+![IMG_4462](https://github.com/user-attachments/assets/8d0fe836-3667-4f13-851f-a8f4391b6ee3)
+![IMG_4463](https://github.com/user-attachments/assets/a0f0db74-ae45-4d3a-bb28-2d2c288d3cab)
 
 
-<img width="563" alt="Screenshot 2024-11-17 at 8 21 38 PM" src="https://github.com/user-attachments/assets/bdba2316-7898-4ce0-a1bc-5284f6a54673">
 
 
 ## 4. Design and Process Documentation Overlap
