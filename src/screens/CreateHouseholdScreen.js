@@ -95,10 +95,11 @@ export default function CreateHouseholdScreen({ navigation }) {
                     query(householdsRef, where('normalizedHouseholdName', '==', normalizedName))
                 );
 
-                if (!querySnapshot.empty) {
-                    setErrorMessage(`${normalizedName} is already taken. Please choose another name.`);
-                    return;
-                }
+                // if (!querySnapshot.empty) {
+                    
+                //     setErrorMessage(`${normalizedName} is already taken. Please choose another name.`);
+                //     return;
+                // }
                 
                 // fetch user's name from 'users' collection
                 const userDocRef = doc(db, 'users', userId);

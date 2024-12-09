@@ -741,59 +741,7 @@ export default function BalancesScreen() {
               }
 
               // Handle item transactions
-              if (item.type === 'item') {
-                return (
-                  <View
-                    style={[
-                      styles.transactionCard,
-                      item.owedBy === auth.currentUser.uid ? styles.splitTransaction : styles.receivedTransaction,
-                    ]}
-                  >
-                    <Text style={styles.transactionDescription}>
-                      {item.itemName ? `${item.itemName}: $${item.amount.toFixed(2)}` : 'No details available'}
-                    </Text>
-                    <Text style={styles.transactionPayer}>
-                      Paid by: {item.owedByUsername || 'Unknown'}
-                    </Text>
-                    <Text style={styles.transactionPayee}>
-                      Owed to: {item.owedToUsername || 'Unknown'}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.transactionAmount,
-                        item.owedBy === auth.currentUser.uid ? styles.negativeAmount : styles.positiveAmount,
-                      ]}
-                    >
-                      {item.proportionalContribution !== undefined && !isNaN(item.proportionalContribution)
-                        ? item.owedBy === auth.currentUser.uid
-                          ? `-$${item.proportionalContribution.toFixed(2)}`
-                          : `+$${item.proportionalContribution.toFixed(2)}`
-                        : '$0.00'}
-                    </Text>
-                    <Text style={styles.transactionDate}>
-                      Date: {item.createdAt
-                        ? item.createdAt instanceof Date
-                          ? `${item.createdAt.toLocaleDateString('en-US')} ${item.createdAt.toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}`
-                          : typeof item.createdAt.toDate === 'function'
-                          ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}`
-                          : `${new Date(item.createdAt).toLocaleDateString('en-US')} ${new Date(item.createdAt).toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}`
-                        : 'Unknown date'}
-                    </Text>
-                  </View>
-                );
-              }
+              
 
               return null;
             }}
@@ -873,55 +821,55 @@ export default function BalancesScreen() {
                 // Handle item transactions
                 if (item.type === 'item') {
                   return (
-                    <View
-                      style={[
-                        styles.transactionCard,
-                        item.owedBy === auth.currentUser.uid ? styles.splitTransaction : styles.receivedTransaction,
-                      ]}
-                    >
-                      <Text style={styles.transactionDescription}>
-                        {item.itemName ? `${item.itemName}: $${item.amount.toFixed(2)}` : 'No details available'}
-                      </Text>
-                      <Text style={styles.transactionPayer}>
-                        Paid by: {item.owedByUsername || 'Unknown'}
-                      </Text>
-                      <Text style={styles.transactionPayee}>
-                        Owed to: {item.owedToUsername || 'Unknown'}
-                      </Text>
-                      <Text
+                      <View
                         style={[
-                          styles.transactionAmount,
-                          item.owedBy === auth.currentUser.uid ? styles.negativeAmount : styles.positiveAmount,
+                          styles.transactionCard,
+                          item.owedBy === auth.currentUser.uid ? styles.splitTransaction : styles.receivedTransaction,
                         ]}
                       >
-                        {item.amount !== undefined && !isNaN(item.amount)
-                          ? item.owedBy === auth.currentUser.uid
-                            ? `-$${(Math.abs(parseFloat(item.amount)) / householdMembersCount).toFixed(2)}`
-                            : `+$${(parseFloat(item.amount) / householdMembersCount).toFixed(2)}`
-                          : '$0.00'}
-                      </Text>
-                      <Text style={styles.transactionDate}>
-                        Date: {item.createdAt
-                          ? item.createdAt instanceof Date
-                            ? `${item.createdAt.toLocaleDateString('en-US')} ${item.createdAt.toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true,
-                              })}`
-                            : typeof item.createdAt.toDate === 'function'
-                            ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true,
-                              })}`
-                            : `${new Date(item.createdAt).toLocaleDateString('en-US')} ${new Date(item.createdAt).toLocaleTimeString('en-US', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true,
-                              })}`
-                          : 'Unknown date'}
-                      </Text>
-                    </View>
+                        <Text style={styles.transactionDescription}>
+                          {item.itemName ? `${item.itemName}: $${item.amount.toFixed(2)}` : 'No details available'}
+                        </Text>
+                        <Text style={styles.transactionPayer}>
+                          Paid by: {item.owedByUsername || 'Unknown'}
+                        </Text>
+                        <Text style={styles.transactionPayee}>
+                          Owed to: {item.owedToUsername || 'Unknown'}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.transactionAmount,
+                            item.owedBy === auth.currentUser.uid ? styles.negativeAmount : styles.positiveAmount,
+                          ]}
+                        >
+                          {item.proportionalContribution !== undefined && !isNaN(item.proportionalContribution)
+                            ? item.owedBy === auth.currentUser.uid
+                              ? `-$${item.proportionalContribution.toFixed(2)}`
+                              : `+$${item.proportionalContribution.toFixed(2)}`
+                            : '$0.00'}
+                        </Text>
+                        <Text style={styles.transactionDate}>
+                          Date: {item.createdAt
+                            ? item.createdAt instanceof Date
+                              ? `${item.createdAt.toLocaleDateString('en-US')} ${item.createdAt.toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                })}`
+                              : typeof item.createdAt.toDate === 'function'
+                              ? `${item.createdAt.toDate().toLocaleDateString('en-US')} ${item.createdAt.toDate().toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                })}`
+                              : `${new Date(item.createdAt).toLocaleDateString('en-US')} ${new Date(item.createdAt).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                })}`
+                            : 'Unknown date'}
+                        </Text>
+                      </View>
                   );
                 }
       
