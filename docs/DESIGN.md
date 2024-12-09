@@ -11,11 +11,6 @@ Our project is built on **React Native** for the frontend with Firebase services
 - **Backend**: The backend uses Firebase for authentication, database management, and real-time syncing. It handles user sign-up, household management, shopping lists, and expense tracking using Firebase Authentication and Firestore.
 - **Database**: Firestore is used for storing users, households, shopping lists, and balances, ensuring real-time data sync.
 
-![IMG_0454](https://github.com/user-attachments/assets/2885d08a-70bd-4325-a2fb-7a7925bdc00c)
-![IMG_0455](https://github.com/user-attachments/assets/3e38ae89-0dbb-46ec-b480-d28d23c61ff3)
-
-
-
 
 
 The application consists of various components:
