@@ -52,3 +52,6 @@ To install and run this app, you'll need the following:
 
 4. **Test app on Expo Go**:
 - Scan the QR code displayed from the previous step, and scan it with your mobile device that has the Expo Go app installed.
+
+# Note on PayPal Functionality
+Currently in Developer Mode, see https://github.com/ucsb-cs184-f24/team09-Shopping/pull/131 for more details if interested in testing this feature
